@@ -380,7 +380,7 @@ class SentenceReader
 }
 
 /**
- * Provides one page of the document
+ * Implements functionality of one page of the document
  * Consists one or zero header, few paragraphs and zero or few footnotes
  * 
  * @author dr.Dobermann
@@ -470,7 +470,7 @@ class Page
 
 /**
  * Provides single paragraph functionality
- * Every single line might have position linked decoration (such as bold,
+ * Every single line might have position-linked decorations (such as bold,
  * italic and so on).
  *  
  * @author dr.Dobermann
@@ -860,7 +860,12 @@ class Para implements
 }
 //-----------------------------------------------------------------------------
 
-
+/**
+ * Implements functionality of a footnote
+ * 
+ * @author dr.Dobermann
+ *
+ */
 class Footnote extends Para 
                implements TFExcDataLoad {
 	
@@ -896,7 +901,7 @@ class Footnote extends Para
 		
 		ParaLine pl = new ParaLine(this, page.getWidth());
 		
-		pl.AddString(String.format(fNoteFmt, noteID), new DecoPair[0]);
+		pl.AddString(String.format(fNoteFmt, noteID), new Decor[0]);
 		buff.add(pl);
 	}
 	
@@ -936,9 +941,9 @@ class Footnote extends Para
  */
 class DecoratedStr {
 	public String str;
-	public DecoPair[] dpl;
+	public Decor[] dpl;
 	
-	public DecoratedStr (String str, DecoPair[] dpl) {
+	public DecoratedStr (String str, Decor[] dpl) {
 		this.str = str;
 		this.dpl = dpl;
 	}
@@ -947,9 +952,15 @@ class DecoratedStr {
 
 
 /**
- * Consists information about decoration command
+ * Consists of information about decoration command
  * Every decoration command linked to a line position.
  * It could start decoration or end decoration
+ * 
+ * Decoration could also has a data related to it. Usually 
+ * starting decoration has it. The content of the data depends on 
+ * type of decoration. 
+ * For example, footnote decoration has a footnote index in data
+ * as a string.
  * 
  * @author dr.Dobermann
  */
@@ -1010,6 +1021,14 @@ class Decor
 		this.pos = pos;
 	}
 	
+	public Decor(DeCmd cmd, int pos, Object data) {
+		this.line = null;
+		this.cmd = cmd;
+		this.data = data;
+		this.pos = pos;
+
+	}
+	
 	/**
 	 * Shifts decoration position on given shift
 	 * @param shift -- number of positions to shift. Might be negative
@@ -1017,7 +1036,7 @@ class Decor
 	public void ShiftPos(int shift) throws TFException {
 		
 		int newPos = pos + shift;
-		if ( newPos < 0 || newPos > line.GetLength() )
+		if ( newPos < 0 || ( line != null && newPos > line.GetLength()) )
 			throw new 
 				TFException(getID(), 
 							"Could not shift beyond the line bounds!!!");
@@ -1044,6 +1063,64 @@ class Decor
 		
 		pos = newPos;
 	}
+
+	/**
+	 * Returns a tail of the DecoPair array which element's pos is bigger than fromPos.
+	 * Positions of the tail elements aligned by fromPos
+	 * 
+	 * @param dpl		-- initial DecoPair array
+	 * @param fromPos   -- position to align from.
+	 *  
+	 * @return new array formed form an initial one (dpl)
+	 *  
+	 * @throws TFException
+	 */
+	public static Decor[] DropTail ( Decor[] dpl, int fromPos ) {
+
+		List<Decor> res = new ArrayList<Decor>();
+		
+		for ( Decor d : dpl )
+			if ( d.pos > fromPos )
+				res.add(new Decor(d.cmd, d.pos - fromPos, d.data));
+		
+		return res.toArray(new Decor[0]);
+	
+	}
+	
+	/**
+	 * Gets first part of DecoPair array and return it
+	 * @param dpl     -- initial DecoPair array
+	 * @param maxIdx  -- maximum index to slice
+	 * @return new array of dpl elements from 0 to maxIdx
+	 */
+	public static Decor[] GetMaxIdx ( Decor[] dpl, int maxIdx ) {
+		
+		List<Decor> res = new ArrayList<Decor>();
+		
+		for ( int d = 0; d <= maxIdx; d++ )
+			res.add(dpl[d]);
+		
+		return res.toArray(new Decor[0]);
+	}
+	
+	/**
+	 * Gets first pairs of DecoPair array, which pos is less or equal to maxPos
+	 *  
+	 * @param dpl    -- initial DecoPair array
+	 * @param maxPos -- maximum position to select resulting elements
+	 * 
+	 * @return array of DecoPair, which position is less or equal to maxPos 
+	 */
+	public static Decor[] GetMaxPos ( Decor[] dpl, int maxPos ) {
+		
+		List<Decor> res = new ArrayList<Decor>();
+		
+		for ( Decor d : dpl )
+			if ( d.pos <= maxPos )
+				res.add(d);
+		
+		return res.toArray(new Decor[0]);
+	}
 	
 	/* 
 	 * @see textformatter.TFExcDataLoad#getID()
@@ -1068,83 +1145,7 @@ class Decor
 }
 //-----------------------------------------------------------------------------
 
-
-/**
- * Represents a pair of Decoration Code and its position
- * 
- * @author dr.Dobermann
- */
-class DecoPair {
-	public Decor.DeCmd dCmd;
-	public int   pos;
-	public Object data;
 	
-	public DecoPair( Decor.DeCmd dCmd, int pos, Object data) {
-		this.dCmd = dCmd;
-		this.pos = pos;
-		this.data = data;
-	}
-
-	/**
-	 * Returns a tail of the DecoPair array which element's pos is bigger than fromPos.
-	 * Positions of the tail elements aligned by fromPos
-	 * 
-	 * @param dpl		-- initial DecoPair array
-	 * @param fromPos   -- position to align from.
-	 *  
-	 * @return new array formed form an initial one (dpl)
-	 *  
-	 * @throws TFException
-	 */
-	public static DecoPair[] DropTail ( DecoPair[] dpl, int fromPos ) {
-
-		List<DecoPair> res = new ArrayList<DecoPair>();
-		
-		for ( DecoPair dp : dpl )
-			if ( dp.pos > fromPos )
-				res.add(new DecoPair(dp.dCmd, dp.pos - fromPos, dp.data));
-		
-		return res.toArray(new DecoPair[0]);
-	
-	}
-	
-	/**
-	 * Gets first part of DecoPair array and return it
-	 * @param dpl     -- initial DecoPair array
-	 * @param maxIdx  -- maximum index to slice
-	 * @return new array of dpl elements from 0 to maxIdx
-	 */
-	public static DecoPair[] GetMaxIdx ( DecoPair[] dpl, int maxIdx ) {
-		
-		List<DecoPair> res = new ArrayList<DecoPair>();
-		
-		for ( int d = 0; d <= maxIdx; d++ )
-			res.add(dpl[d]);
-		
-		return res.toArray(new DecoPair[0]);
-	}
-	
-	/**
-	 * Gets first pairs of DecoPair array, which pos is less or equal to maxPos
-	 *  
-	 * @param dpl    -- initial DecoPair array
-	 * @param maxPos -- maximum position to select resulting elements
-	 * 
-	 * @return array of DecoPair, which position is less or equal to maxPos 
-	 */
-	public static DecoPair[] GetMaxPos ( DecoPair[] dpl, int maxPos ) {
-		
-		List<DecoPair> res = new ArrayList<DecoPair>();
-		
-		for ( DecoPair dp : dpl )
-			if ( dp.pos <= maxPos )
-				res.add(dp);
-		
-		return res.toArray(new DecoPair[0]);
-	}
-};
-//-----------------------------------------------------------------------------
-
 /**
  * Describes one line of a paragraph 
  * Consist the line itself and all related decorations
@@ -1413,7 +1414,7 @@ class ParaLine
 	 * 
 	 * @throws TFException
 	 */
-	public void AddString( String str, DecoPair[] decors)
+	public void AddString( String str, Decor[] decors)
 		throws TFException {
 		
 		if ( str.length() > width - buff.length() )
@@ -1424,8 +1425,8 @@ class ParaLine
 		
 		buff.append(str);
 		
-		for ( DecoPair dp : decors ) 
-			InsertDecor(dp.dCmd, dp.pos + pos, dp.data);
+		for ( Decor d : decors ) 
+			InsertDecor(d.getCmd(), d.getPos() + pos, d.getData());
 	}
 	
 	/**
@@ -1453,7 +1454,7 @@ class ParaLine
 	 * 
 	 * @param pos  -- position to check at
 	 * 
-	 * @return array of linked to postion decorations. Might be empty 
+	 * @return array of linked to position decorations. Might be empty 
 	 */
 	public Decor[] GetDecorAt( int pos ) {
 		
@@ -1555,7 +1556,7 @@ class ParaLine
 		int lastPos = 0,
 			compensator = 0;
 		
-		List<DecoPair> decors = new ArrayList<DecoPair>();
+		List<Decor> decors = new ArrayList<Decor>();
 		Decor.DeCmd dCmd;
 		
 		Matcher m = Pattern.compile("\\&(\\w?)([\\+|-]?)(\\{(\\w*)\\})?+").matcher(str);
@@ -1613,7 +1614,7 @@ class ParaLine
 											  m.group(1), m.start(), str));
 			}
 			
-			decors.add(new DecoPair(dCmd, m.start() - compensator, m.group(4)));
+			decors.add(new Decor(dCmd, m.start() - compensator, m.group(4)));
 				
 			
 			// compensation offset for the DecoPair position
@@ -1627,7 +1628,7 @@ class ParaLine
 			sb.append(str.substring(lastPos));
 		
 		
-		return new DecoratedStr(sb.toString(), decors.toArray(new DecoPair[0]));
+		return new DecoratedStr(sb.toString(), decors.toArray(new Decor[0]));
 	}
 	
 	

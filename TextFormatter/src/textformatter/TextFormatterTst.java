@@ -51,11 +51,11 @@ public class TextFormatterTst {
 			System.out.printf("DecoratedStr.str is \n[%s]\n ", dStr.str);
 			for ( int l = 0; l < dStr.str.length(); l++ )
 				System.out.print(l%10);
-			for ( DecoPair dp : dStr.dpl )
+			for ( Decor dp : dStr.dpl )
 				System.out.printf("\nDecoration [%s] found at [%d] with data [%s]", 
-								  dp.dCmd.toString(), 
-								  dp.pos,
-								  dp.data == null ? "null" : dp.data.toString());
+								  dp.getCmd().toString(), 
+								  dp.getPos(),
+								  dp.getData() == null ? "null" : dp.getData().toString());
 		}
 		catch ( TFException e) {
 			System.out.println("Exception fired: " + e.getMessage());
