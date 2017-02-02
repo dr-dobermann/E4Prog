@@ -1,0 +1,135 @@
+Task description:
+====================
+This task is taken from the book Etudes for Programmers by Charles Wetherell.
+This is a third task in the book.
+
+Create a text formatter which could process an input text stream and provide an 
+output text stream formatted according to formatting commands in input stream.
+It's necessary to create a visualization tool for presenting the results.
+
+Every command starts at first position of input steam string from letter "?".
+
+Notes:
+===================
+1. The task conditions were little bit changed from original assignment 
+  1.1. Alignment sets as as_is, left, right, centered and proportional
+  1.2. Command ?center deleted as excess
+2. Double empty lines in input stream closes current paragraph
+3. Single empty line closes current sentence
+4. Footnotes should be on the same page as the paragraph related. 
+   If there is no space for whole footnote, part of it moves to the
+   next page. If there is still no enough space on the page, part of
+   the paragraph up to link on footnote also moves on the next page.
+5. Page could not become wider than it was initially.
+6. Footnotes takes initial width of the page (max width) and does not uses
+   related paragraph width.
+
+
+Strategy:
+===================
+1. Read every line from the input until the end. Reader should return 
+   one complete sentence. If could be interrupted for the processing a
+   footnote, but after it it should complete the sentence if the footnote
+   is in center of the sentence. All special symbols as \t \n \r should be
+   removed or exchanged on spaces from the sentence. All extra spaces should also
+   be removed. After ":" should be double spaces.
+   
+  1.1. If line starts with the command sign "?", process the command. If
+       command closes the paragraph, close it and start a new one.
+  1.2. All loaded lines clears from decoration commands, which linked to
+       the line as a list of DecorationCode and line Position pair.
+  1.3. Add line to paragraph buffer. Lines of buffer have different length.
+       After appending, the paragraph becomes invalid and should be formatted. 
+       Every line should be finished by double spaces.
+  1.4. Formatting processes every buffer line and fill lines of the paragraph
+       according to paragraph settings (interval, margins, indent, align). 
+  1.5. If there is a footnote, read necessary amount of string to it and
+       continue with paragraph. Instead a footnote, footnote mark should be
+       added to the line instead of footnote command. Footnote mark encloses in
+       line as decoration. 
+  1.6. If paragraph should be closed, it is processed according to given width,
+       alignment, centering commands and related footnotes.
+  1.7. Processed paragraph is added to the page. If there is no enough space on 
+       the page, a new one is created and rest of paragraph and related footnotes
+       are placed on it. 
+
+
+Command list:
+====================
+-----------------------------------------------------------------------------------
+name        | parameters (values) _ defaults _                         | closes the
+description |                                                          | paragraph
+-----------------------------------------------------------------------------------
+?size         height width _ 40 72 _                                     yes
+Sets the page size
+
+?align        type (as_is, left, right, 
+                    center, fill)            _ left _                    yes
+Sets paragraphs align mode.
+as_is                 -- text presented as is 
+left, center, right   -- eliminates all extra whitespaces and align 
+                         the text according settings
+fill                  -- text placed from left to right with no trail 
+                         or leading spaces. Extra spaces are added 
+                         between the words where necessary
+                         
+?par          indent spacesB spaces A _ 3 0 0 _                          yes
+Starts new paragraph with given indent and spaces intervals 
+before and after paragraphs
+
+?margin       left right                                                 yes
+Sets the margins from left and rights for next paragraphs 
+
+?interval     lines _ 1 _
+Sets interval between the paragraph lines                                yes
+
+?feedlines    lines_count                                                yes
+Feed lines_count empty lines with given interval. 
+Does not add empty lines on a new page start.
+
+?feed          lines _ 0 _                                               yes
+Feed exactly lines lines ignoring the interval settings.
+Does not add empty lines on a new page start.  
+
+?newpage                                                                 yes
+Starts new page
+
+?left          n                                                         yes
+Checks if there are at least n lines of the page. 
+If there are less that n lines, then next page starts.
+If there are more that n lines left on the page, the command is ignored
+
+?header        height pn_line pn_position                                no
+Sets page header for next pages in height lines. 
+Page number printed in pn_line on pn_position (left, right, center).
+Command with 0 height disables the page headers for next pages
+
+?pnum          n                                                         no
+Sets current page number counter
+
+?pb                                                                      yes
+Ends the current paragraph  
+
+?footnote      nstrings                                                  no
+Adds a footnote to the page. Footnote is formed from the next nstrings. 
+A new footnote pops up the existed ones.
+If there is no place to put the whole footnote on the page, 
+the rest of it moves to the next page
+
+?alias         new_name old_name                                         no
+Add alias for the symbol to mask it further
+
+Formatting commands:
+===================
+There are could be text formatting commands inside the paragraph.
+They look as &<command_name>+/-. 
+<command_name> could consists of a few commands combined
+---------------------------------------------------------------------------
+code     |  description
+---------------------------------------------------------------------------
+B           bold
+I           italic
+U           underline
+X           top index
+x           bottom index
+
