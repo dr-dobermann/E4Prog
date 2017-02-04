@@ -14,13 +14,15 @@ Notes:
 1. The task conditions were little bit changed from original assignment 
   1.1. Alignment sets as as_is, left, right, centered and proportional
   1.2. Command ?center deleted as excess
-2. Double empty lines in input stream closes current paragraph
-3. Single empty line closes current sentence
+2. Double empty lines in input stream closes current paragraph. More 
+   single line in a row just ignored.
+3. Single empty line closes current sentence. If there is only one
+   command on the line, this line counts as an empty line.
 4. Footnotes should be on the same page as the paragraph related. 
    If there is no space for whole footnote, part of it moves to the
    next page. If there is still no enough space on the page, part of
    the paragraph up to link on footnote also moves on the next page.
-5. Page could not become wider than it was initially.
+5. Page could not become wider than it was initially set.
 6. Footnotes takes initial width of the page (max width) and does not uses
    related paragraph width.
 

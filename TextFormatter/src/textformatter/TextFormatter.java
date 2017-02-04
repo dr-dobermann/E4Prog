@@ -28,6 +28,8 @@ public class TextFormatter
 	private @Getter int width = 72;
 	private @Getter int height = 40;
 	
+	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
+	
 	
 	private int lastNoteID = 1;
 	private SentenceReader reader;
@@ -71,11 +73,17 @@ public class TextFormatter
 		
 		while ( str != null ) {
 			
-			if ( str.length() == 0 && emptyLinesCount == 1 )
-			{
-				GetLastPage().AddNewPara();
-				
-			}
+			str = CheckAndExecCmd(str);
+			
+			if ( str.length() == 0 && ++emptyLinesCount == 2)
+				if ( align != Para.PAlign.PA_AS_IS )
+					GetLastPage().AddNewPara();
+				else
+					GetLastPage().AddString(ParaLine.PrepareString(str));
+			
+			GetLastPage().AddString(ParaLine.PrepareString(str));
+			
+			str = reader.GetRawSentence();
 		}
 	}
 	
@@ -97,6 +105,20 @@ public class TextFormatter
 	}
 	
 	/**
+	 * Adds a new page into the document
+	 * 
+	 * @return newly added page
+	 */
+	public Page AddPage() {
+		
+		Page newPage = new Page(this);
+		
+		pages.add(newPage);
+		
+		return newPage;
+	}
+	
+	/**
 	 * Checks if there is controlling command in the begin of the line.
 	 * If the command exists, it cut and processed
 	 * 
@@ -106,7 +128,7 @@ public class TextFormatter
 	 * 
 	 * @throws TFException
 	 */
-	private String ExecCmd(String str) 
+	private String CheckAndExecCmd(String str) 
 		throws TFException {
 		
 		final Pattern cmdName = Pattern.compile("^\\?(\\w+)");
@@ -119,12 +141,19 @@ public class TextFormatter
 		m = cmdName.matcher(str);
 		if ( !m.find() )
 			throw new
-				TFException(getID(), "[ExecCmd] Could not find command in string [%s]!!!", str);
+				TFException(getID(), 
+						    "[CheckAndExecCmd] Could not find command in string [%s]!!!", 
+						    str);
 		
 		String cmd = m.group(1);
+		String[] params;
 		
 		switch ( cmd ) {
 			case "size" :
+				params = GetCmdParams(str, "\\?size +(\\d+) +(\\d+", "size", 2);
+				int w = Integer.parseInt(params[0]),
+					h = Integer.parseInt(params[1]);
+				
 				break;
 				
 			case "align" :
@@ -171,7 +200,30 @@ public class TextFormatter
 		return str;
 	}
 
-	
+	private String[] GetCmdParams(String str, String searchStr, String cmd, int paraNum) 
+		throws TFException {
+		
+		List<String> params = new ArrayList<String>();
+		
+		Matcher m = Pattern.compile(searchStr).matcher(str);
+		
+		if ( !m.find() )
+			throw new
+				TFException(getID(),
+						    "[GetCmdParams] Could not find parameters for command [%s] in the string \"%s\"",
+						    cmd, str);
+		
+		if ( m.groupCount() != paraNum + 1 )
+			throw new
+				TFException(getID(), 
+							"[GetCmdParams] Invalid parameters count for command [%s]!!!\n Found %d instead of %d.",
+							cmd, m.groupCount() - 1, paraNum);
+		
+		for ( int i = 1; i <= m.groupCount(); i++ )
+			params.add(m.group(i));
+		
+		return params.toArray(new String[0]);
+	}
 	/* 
 	 * @see textformatter.TFExcDataLoad#getID()
 	 */
@@ -540,9 +592,8 @@ class Para implements
 		buff.add(pl);
 		
 		// add double spaces into the end of the every sentence
-		pl.AddString(str + "  ", str.dpl);
-		
-	
+		if ( str.str.length() > 0 )
+			pl.AddString(str + "  ", new Decor[0]);
 	}
 	
 	/**
@@ -1269,7 +1320,7 @@ class ParaLine
 	}
 
 	/**
-	 * Join a new ParaLine.
+	 * Joins a new ParaLine.
 	 * If its length is longer than the free rest of the existed one,
 	 * only part of it will be added.
 	 * The rest of new ParaLine would be returned
@@ -1419,7 +1470,7 @@ class ParaLine
 		
 		if ( str.length() > width - buff.length() )
 			throw new
-				TFException( getID(), "String [%s] is too long for this ParaLine. Only %d symbols left", str, width - buff.length());
+				TFException( getID(), "[AddString] String [%s] is too long for this ParaLine. Only %d symbols left", str, width - buff.length());
 		
 		int pos = buff.length();
 		
@@ -1428,6 +1479,29 @@ class ParaLine
 		for ( Decor d : decors ) 
 			InsertDecor(d.getCmd(), d.getPos() + pos, d.getData());
 	}
+	
+	/**
+	 * Adds a new decorated string to the ParaLine
+	 *  
+	 * @param dStr -- Decorated string to add
+	 * 
+	 * @throws TFException
+	 */
+	public void AddString(DecoratedStr dStr) 
+		throws TFException {
+		
+		if ( dStr.str.length() > width - buff.length() )
+			throw new
+				TFException( getID(), "[AddString] Decorated string [%s] is too long for this ParaLine. Only %d symbols left", 
+									  dStr.str, width - buff.length());
+		
+		int pos = buff.length();
+		
+		buff.append(dStr.str);
+		
+		for ( Decor d : dStr.dpl )
+			InsertDecor( d.getCmd(), d.getPos() + pos, d.getData());
+	}	
 	
 	/**
 	 * Adds new decoration on ParaLine if the position is out of 
@@ -1541,7 +1615,7 @@ class ParaLine
 	
 	/**
 	 * Processes the input string with decoration command embedded 
-	 * and creates new DecoratedStr
+	 * into it and creates new DecoratedStr
 	 * 
 	 * @param str -- string to process
 	 * 
