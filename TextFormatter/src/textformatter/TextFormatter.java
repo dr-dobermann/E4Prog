@@ -29,11 +29,21 @@ public class TextFormatter
 	private @Getter int height = 40;
 	
 	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
+	private @Getter int interval = 1;
+	private @Getter int[] spaces = new int[] {0, 0};
+	private @Getter int[] margins = new int[] {0, 0};
+	private @Getter int indent = 3;
 	
 	
 	private int lastNoteID = 1;
+	private int lastPageNum = 1;
+	
 	private SentenceReader reader;
 	private int emptyLinesCount = 0;
+
+	private @Getter int headerHeight = 0;
+	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
+	private @Getter int headerLine;
 	
 	private List<Page> pages = new ArrayList<Page>();
 	
@@ -56,8 +66,24 @@ public class TextFormatter
 		
 		return lastNoteID++;
 	}
+
+	/**
+	 * Returns the current page number
+	 * 
+	 * @return current page number
+	 */
+	public int GetLastPageNum() {
+		
+		return lastPageNum++;
+	}
 	
-	
+	/**
+	 * Loads document from an input stream
+	 * 
+	 * @param input  -- input stream
+	 * 
+	 * @throws TFException
+	 */
 	public void LoadDocument(BufferedReader input) 
 		throws TFException {
 		
@@ -109,9 +135,12 @@ public class TextFormatter
 	 * 
 	 * @return newly added page
 	 */
-	public Page AddPage() {
+	public Page AddPage() 
+		throws TFException {
 		
 		Page newPage = new Page(this);
+		
+		GetLastPage().Close(newPage);
 		
 		pages.add(newPage);
 		
@@ -131,62 +160,210 @@ public class TextFormatter
 	private String CheckAndExecCmd(String str) 
 		throws TFException {
 		
-		final Pattern cmdName = Pattern.compile("^\\?(\\w+)");
+		final Pattern cmdName = Pattern.compile( "^\\?(\\w+)" );
 		
 		Matcher m;
 		
-		if ( !str.matches("^\\?\\w+.*$") ) 
+		if ( !str.matches( "^\\?\\w+.*$" ) ) 
 			return str;
 		
-		m = cmdName.matcher(str);
+		m = cmdName.matcher( str );
 		if ( !m.find() )
 			throw new
-				TFException(getID(), 
-						    "[CheckAndExecCmd] Could not find command in string [%s]!!!", 
-						    str);
+				TFException( getID(), 
+						     "[CheckAndExecCmd] Could not find command in string [%s]!!!", 
+						     str );
 		
-		String cmd = m.group(1);
+		String cmd = m.group( 1 );
 		String[] params;
+		int lines;
 		
 		switch ( cmd ) {
 			case "size" :
-				params = GetCmdParams(str, "\\?size +(\\d+) +(\\d+", "size", 2);
-				int w = Integer.parseInt(params[0]),
-					h = Integer.parseInt(params[1]);
+				params = GetCmdParams( str, "\\?size +(\\d+) +(\\d+)", "size", 2 );
+				int w = Integer.parseInt( params[0] ),
+					h = Integer.parseInt( params[1] );
 				
+					if ( h <= 0 || w <= 0 )
+						throw new
+							TFException( getID(), 
+									     "[CheckAndExecCmd] Invalid page size [%d][%d]",
+									     w, h);
+					
+					if ( h < height ) {
+						height = h;
+						AddPage();
+					}
+					
+					width = w;
+					GetLastPage().SetWidth( w );
+						
 				break;
 				
-			case "align" :
+			case "align" : // align settings for the next paragraph
+				params = GetCmdParams(str, "\\?align +(\\w+)", "align", 1);
+				
+				switch ( params[0] ) {
+					case "as_is" :
+						align = Para.PAlign.PA_AS_IS;
+						break;
+					case "left" :
+						align = Para.PAlign.PA_LEFT;
+						break;
+					case "center" :
+						align = Para.PAlign.PA_CENTER;
+						break;
+					case "right" :
+						align = Para.PAlign.PA_RIGHT;
+						break;
+					case "fill" :
+						align = Para.PAlign.PA_FILL;
+						break;
+					default :
+						throw new
+							TFException( getID(),
+										 "[CheckAndExecCmd] Invalid align parameter [%s]!!!",
+										 params[0] );
+					}
+				
+				GetLastPage().SetAlign( align );
+				
 				break;
 				
 			case "par" :
+				params = GetCmdParams( str, "\\?par +(\\d+) +(\\d+) +(\\d+)", "par", 3 );
+				int ind =  Integer.parseInt( params[0] ),
+					sB = Integer.parseInt( params[1] ),
+					sA = Integer.parseInt( params[2] );
+				
+				if ( sB < 0 || sA < 0 )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid paragraphge settings -- indent:[%d], sB:[%d], sA:[%d]",
+								     ind, sB, sA );
+				indent = ind;
+				spaces[0] = sB;
+				spaces[1] = sA;
+				
+				GetLastPage().SetParaSettings( indent, spaces );
+					
 				break;
 				
 			case "margin" :
+				params = GetCmdParams( str, "\\?margin +(\\d+) +(\\d+)", "margin", 2 );
+				int mL = Integer.parseInt( params[0] ),
+					mR = Integer.parseInt( params[1] );
+				
+				if ( mL < 0 || mR < 0 || mL + mR > width )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid margins mL[%d], mR[%d]",
+								     mL, mR );
+				margins[0] = mL;
+				margins[1] = mR;
+				
+				GetLastPage().SetMargins( margins );
+
 				break;
 				
 			case "interval" :
+				params = GetCmdParams( str, "\\?interval +(\\d+)", "margin", 1 );
+				int intr = Integer.parseInt( params[0] );
+				
+				if ( intr < 1 || intr > height )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid interval value [%d]",
+								     intr );
+				interval = intr;
+				
+				GetLastPage().SetInterval( interval );
+
 				break;
 				
-			case "feedlines" :
+			case "feedlines" :  // feed lines into the end of the last paragraph
+							    // with intervals
+				params = GetCmdParams( str, "\\?feedlines +(\\d+)", "feedlines", 1 );
+				lines = Integer.parseInt(params[0]);
+				if ( lines < 1 )
+					throw new
+						TFException( getID(),
+								     "[CheckAndExecCmd] Invalid number of lines for feedlines!!!" );
+				GetLastPage().FeedLines(lines, true);
+				
 				break;
 				
 			case "feed" :
+				params = GetCmdParams( str, "\\?feed +(\\d+)", "feed", 1 );
+				lines = Integer.parseInt(params[0]);
+				if ( lines < 1 )
+					throw new
+						TFException( getID(),
+								     "[CheckAndExecCmd] Invalid number of lines for feed!!!" );
+				GetLastPage().FeedLines(lines, false);
+				
 				break;
 				
 			case "newpage" :
+				AddPage();
 				break;
 				
 			case "left" :
 				break;
 				
 			case "header" :
+				params = GetCmdParams( str, "\\?margin +(\\d+) +(\\d+) +(\\w+)", "header", 3 );
+				int hHeight = Integer.parseInt( params[0] ),
+					hLine   = Integer.parseInt( params[1] );
+				
+				if ( hHeight < 0 || hHeight > height || hLine > hHeight )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid header height [%d]",
+								     hHeight );
+				switch ( params[2] ) {
+					case "left" : 
+						headerAlign = Para.PAlign.PA_LEFT;
+						break;
+						
+					case "right" :
+						headerAlign = Para.PAlign.PA_RIGHT;
+						break;
+						
+					case "center" :
+						headerAlign = Para.PAlign.PA_CENTER;
+						break;
+						
+					default : 
+						throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid header alignment value [%s]",
+								     params[2] );
+				}
+				
+				headerHeight = hHeight;
+				headerLine = hHeight <= hLine ? hHeight - 1 : hLine;
+			
+				GetLastPage().SetHeader();
+
 				break;
 				
 			case "pnum" :
+				params = GetCmdParams( str, "\\?pnum +(\\d+)", "pnum", 1) ;
+				int pNum = Integer.parseInt(params[0]);
+				if ( pNum < 1 )
+					throw new
+						TFException( getID(),
+								     "[CheckAndExecCmd] Invalid page number [%d]",
+								     pNum );
+				
+				lastPageNum = pNum;
+				GetLastPage().SetPageNum(pNum);
+				
 				break;
 				
 			case "pb" :
+				GetLastPage().AddNewPara();
 				break;
 				
 			case "footnote" :
@@ -200,6 +377,19 @@ public class TextFormatter
 		return str;
 	}
 
+	/**
+	 * Looking for command parameters in the string
+	 * 
+	 * @param str		-- checked string
+	 * @param searchStr -- the pattern for the command. It should include command and leading ? sign.
+	 * 					   Every parameter in the pattern should be enclosed in the () pair 
+	 * @param cmd		-- command name for the error messages
+	 * @param paraNum	-- number of parameters
+	 * 
+	 * @return an string array with parameters
+	 * 
+	 * @throws TFException
+	 */
 	private String[] GetCmdParams(String str, String searchStr, String cmd, int paraNum) 
 		throws TFException {
 		
@@ -224,6 +414,7 @@ public class TextFormatter
 		
 		return params.toArray(new String[0]);
 	}
+	
 	/* 
 	 * @see textformatter.TFExcDataLoad#getID()
 	 */
@@ -251,11 +442,13 @@ class SentenceReader
 	private boolean emptyLine = false;
 
 	// sentence end reason
-	enum SEReason {SER_UNKNOWN,
-        SER_PUNCT,
-  		SER_CMD,
-  		SER_EMPTY_LINE,
-  		SER_STREAM_END};
+	enum SEReason {
+					SER_UNKNOWN,
+					SER_PUNCT,
+			  		SER_CMD,
+			  		SER_EMPTY_LINE,
+			  		SER_STREAM_END
+	};
   		
   	private @Getter SEReason seReason = SEReason.SER_UNKNOWN;
   		
@@ -430,6 +623,8 @@ class SentenceReader
 	}
 
 }
+//-----------------------------------------------------------------------------
+
 
 /**
  * Implements functionality of one page of the document
@@ -446,7 +641,7 @@ class Page
 	private @Getter int currWidth = width;
 	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
 	
-	private int pageNum;
+	private @Getter int pageNum;
 	
 	private @Getter int[] spaces = new int[] {0, 0};
 	private @Getter int interval = 1;
@@ -458,10 +653,33 @@ class Page
 	
 	private @Getter int headerHeight = 0;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
+	private @Getter int headerLine;
+	private Header header;
 	
 	
-	public Page(TextFormatter tf) {
+	public Page(TextFormatter tf) 
+		throws TFException {
+		
+		pageNum = tf.GetLastPageNum();
+		
 		textFormatter = tf;
+		
+		if ( tf.getHeaderHeight() > 0 ) {
+			header = new Header( this );
+			paragraphs.add( header );
+			
+			header.ResetHeader();
+		}
+		
+		width = tf.getWidth();
+		height = tf.getHeight();
+		
+		indent = tf.getIndent();
+		interval = tf.getInterval();
+		spaces[0] = tf.getSpaces()[0];
+		spaces[1] = tf.getSpaces()[1];
+		margins[0] = tf.getMargins()[0];
+		margins[1] = tf.getMargins()[1];
 		
 		AddNewPara();
 	}
@@ -471,9 +689,15 @@ class Page
 	//-------------------------------------------------------------------------
 	
 	/**
-	 * Adds a new paragraph on the page
+	 * Adds a new paragraph on the page. Before the addition it closes and 
+	 * formatting the previous one.
 	 */
-	public void AddNewPara() {		
+	public void AddNewPara() 
+		throws TFException {
+		
+		if ( paragraphs.size() > 0 )
+			GetLastPara().Close();
+		
 		paragraphs.add(new Para(this, currWidth, align, interval, indent, spaces, margins));
 	}
 	
@@ -505,7 +729,199 @@ class Page
 		GetLastPara().AddString(str);
 	}
 
+	/**
+	 * Close page and sent the rest of it to the next one
+	 * 
+	 * @param next -- Next page to consume the rest of the current page
+	 */
+	public void Close(Page next) {
+		// TODO: finish the functionality
+	}
+	
+	/**
+	 * Sets new paragraph width. Closes the current paragraph and adds a new one
+	 * 
+	 * @param newWidth -- new paragraphs width for next new paragraphs
+	 * 
+	 * @throws TFException
+	 */
+	public void SetWidth(int newWidth)
+		throws TFException {
+		
+		if ( newWidth > width )
+			throw new
+				TFException(getID(), 
+						    "The new page width [%d] should not be greater than its initial widht [%d]!!!",
+						    newWidth, width);
+		
+		currWidth = newWidth;
+		
+		AddNewPara();
+	}
+	
+	/**
+	 * Sets or deletes the page header
+	 * 
+	 * @param height
+	 * @param line
+	 * @throws TFException
+	 */
+	public void SetHeader() 
+		throws TFException {
+		
+		if ( textFormatter.getHeaderHeight() > 1 ) {
+			
+			headerHeight = textFormatter.getHeaderHeight();
+			headerLine = textFormatter.getHeaderLine();
+			headerAlign = textFormatter.getHeaderAlign();
+			
+			if ( header == null ) {
+				header = new Header( this );
+				paragraphs.add(0, header);
+			}
+		}
+		else 
+			headerHeight = 0;
+		
+		header.ResetHeader();
+	}
+	
+	/**
+	 * Feeds lines in the last paragraph
+	 * 
+	 * @param lines	       -- lines to feed
+	 * @param withInterval -- add interval after lines or not
+	 * 
+	 * @throws TFException
+	 */
+	public void FeedLines(int lines, boolean withInterval) 
+		throws TFException {
+		
+		GetLastPara().FeedLines(lines, withInterval);
+		
+		AddNewPara();
+	}
+	
+	/**
+	 * Sets new align setting for the next paragraphs
+	 * 
+	 * @param newAlign -- new align settings
+	 * 
+	 * @throws TFException
+	 */
+	public void SetAlign(Para.PAlign newAlign ) 
+		throws TFException {
+		
+		align = newAlign;
+		
+		AddNewPara();		
+	}
+	
+	/**
+	 * Sets new paragraph settings
+	 * 
+	 * @param indent   -- new first line indent settings
+	 * @param spaces   -- spaces before[0] and after[1] paragraph
+	 * 
+	 */
+	public void SetParaSettings( int indent, int[] spaces ) 
+		throws TFException {
+		
+		if ( spaces[0] < 0 || spaces[1] < 0)
+			throw new
+			TFException( getID(),
+					     "[SetParaSettings] Invalid spaces [%d] [%d]",
+					     spaces[0], 
+					     spaces[1] );
+		
+		
+		if ( indent < 0 && margins[0] < -indent )
+			throw new
+				TFException( getID(),
+						     "[SetParaSettings] Invalid negative indent [%d]." +
+						     "Should be not less than left margin [%d]",
+						     indent, 
+						     margins[0] );
+			 
+		if ( indent > 0 && indent > currWidth )
+			throw new
+				TFException( getID(),
+						     "[SetParaSettings] Indent [%d] is wider than current page width [%d].",
+						     indent, 
+						     currWidth );
+		
+		this.spaces[0] = spaces[0];
+		this.spaces[1] = spaces[1];
+		
+		this.indent = indent;
+		
+		AddNewPara();	 
+	}
 
+	/**
+	 * Sets margins settings for new paragraphs
+	 * 
+	 * @param  margins   -- new margins settings [0] - left, [1] - right
+	 * 
+	 * @throws TFException
+	 */
+	public void SetMargins( int[] margins ) 
+		throws TFException {
+		
+		if ( margins[0] < 0 || margins[1] < 0 || margins[0] + margins[1] > width )
+			throw new
+			TFException( getID(),
+					     "[SetMargins] Invalid margins [%d] [%d]",
+					     margins[0], 
+					     margins[1] );
+		
+		this.margins[0] = margins[0];
+		this.margins[1] = margins[1];
+		
+		AddNewPara();	 	
+	}
+	
+	/**
+	 * Sets new interval value for next paragraphs
+	 * 
+	 * @param newInt
+	 * @throws TFException
+	 */
+	public void SetInterval( int newInt ) 
+		throws TFException {
+		
+		if ( newInt  < 0 || newInt > height )
+			throw new
+			TFException( getID(),
+					     "[SetInterval] Invalid interval value [%d]!!!",
+					     newInt );
+		
+		interval = newInt;
+				
+		AddNewPara();	 	
+	}
+
+	/**
+	 * Sets new page number
+	 * 
+	 * @param pNum -- new page number
+	 * 
+	 * @throws TFException
+	 */
+	public void SetPageNum( int pNum ) 
+		throws TFException {
+		
+		if ( pNum < 0 )
+			throw new
+			TFException( getID(),
+					     "[SetInterval] Invalid page number [%d]!!!",
+					     pNum );
+		
+		pageNum = pNum;
+		
+		header.ResetHeader();
+	}
+	
 	/* 
 	 * @see textformatter.TFExcDataLoad#getID()
 	 */
@@ -539,10 +955,14 @@ class Para implements
 					PA_FILL
 				};
 	
-	private @Getter PAlign align;
+	protected @Getter PAlign align;
 	
 	private @Getter int width;
-	private @Getter Page page;
+	protected @Getter Page page;
+	
+	// if paragraph is closed any addition to it
+	// will fire TFException
+	protected @Getter boolean closed = false;
 	
 	private @Getter int indent;
 	private @Getter int[] spaces;
@@ -552,7 +972,7 @@ class Para implements
 	                              // lines 
 	
 	// the flag shows if the formatted lines are comply with the buffer
-	private @Getter boolean isInvalid = true;
+	protected @Getter boolean isInvalid = true;
 	// buffer of unformatted ParaLines 
 	protected List<ParaLine> buff = new ArrayList<ParaLine>();
 	// list of formatted ParaLines
@@ -578,6 +998,18 @@ class Para implements
 	}
 
 	/**
+	 * Closing the paragraph
+	 */
+	public void Close() 
+		throws TFException {
+		
+		if ( isInvalid )
+			Format();
+		
+		closed = true;
+	}
+	
+	/**
 	 * Adds string to a unformatted buffer and adds decorations to it
 	 * 
 	 * @param str 		-- string to add
@@ -585,6 +1017,10 @@ class Para implements
 	 */
 	public void AddString(DecoratedStr str) 
 		throws TFException {
+		
+		if ( closed )
+			throw new 
+				TFException(getID(), "[AddString] Paragraph already closed!!!");
 		
 		isInvalid = true;
 		
@@ -606,6 +1042,12 @@ class Para implements
 	 */
 	public void AddFootnote(DecoratedStr[] footnote, int fNoteID) 
 		throws TFException {
+
+		if ( closed )
+			throw new 
+				TFException(getID(), "[AddString] Paragraph already closed!!!");
+		
+		isInvalid = true;
 		
 		if ( footnote.length > 0 ) {
 			
@@ -636,6 +1078,12 @@ class Para implements
 		int maxLen, lineNo;
 		
 		for ( ParaLine pl : buff ) {
+			
+			if ( pl.GetLength() == 0 ) {
+				lines.add(pl);
+				AddInterval();
+				continue;
+			}
 			
 			line = pl.Copy();
 			lineNo = buff.indexOf(pl);
@@ -682,6 +1130,34 @@ class Para implements
 	}
 	
 	/**
+	 * Adds extra empty lines in the end of the paragraph
+	 * and closes it
+	 * 
+	 * @param lNum
+	 * @param withInterval
+	 */
+	public void FeedLines( int lNum, boolean withInterval ) 
+		throws TFException {
+		
+		if ( closed )
+			throw new 
+				TFException( getID(), 
+						     "[AddString] Paragraph already closed!!!" );
+		
+		Format();
+		
+		for ( int l = 0; l < lNum; l++ ) {
+			lines.add( new ParaLine( this, width ) );
+			if ( withInterval && interval > 1 )
+				for ( int i = 0; i < interval; i++ )
+					lines.add(new ParaLine(this, width));
+		}
+
+		closed = true;
+		
+	}
+	
+	/**
 	 * Links all footnotes which were transferred from buffer line to the 
 	 * last formatted line 
 	 * 
@@ -720,7 +1196,7 @@ class Para implements
 	 * 
 	 * @throws TFException
 	 */
-	private void AlignLine(ParaLine pl, boolean lastLine) 
+	protected void AlignLine(ParaLine pl, boolean lastLine) 
 		throws TFException {
 		
 		if ( align != Para.PAlign.PA_AS_IS )
@@ -750,8 +1226,7 @@ class Para implements
 				break;
 			
 			case PA_CENTER :
-				pl.Pad(Para.PAlign.PA_LEFT, ' ', fillSpace/2);
-				pl.Pad(Para.PAlign.PA_RIGHT, ' ', fillSpace - fillSpace/2);
+				pl.Pad(Para.PAlign.PA_CENTER, ' ', fillSpace);
 				break;
 			
 			case PA_FILL :
@@ -803,10 +1278,33 @@ class Para implements
 			pl.Pad(Para.PAlign.PA_LEFT, ' ', indent < 0 ? margins[0] + indent : margins[0]);
 		if ( margins[1] > 0 )
 			pl.Pad(Para.PAlign.PA_RIGHT, ' ', margins[1]);
+		
+		AddInterval();
 
 	}
 	
+	/**
+	 * Adds an interval after the formatted line
+	 * 
+	 * @throws TFException
+	 */
+	private void AddInterval() 
+		throws TFException {
+
+		for ( int i = 1; i < interval;  i++ ) 
+			lines.add(new ParaLine(this, width));
+	}
 	
+	/**
+	 * Looking for footnotes, linked to the line
+	 * 
+	 * @param line -- line number in buffered or formatted paragraph lines
+	 * 
+	 * @param inFormatted -- if true, the search starts in formatted lines,
+	 * 						 if false only buffer is checked
+	 * 
+	 * @return an array of footnotes, linked to the line
+	 */
 	private Footnote[] GetFNotesOnLine(int line, boolean inFormatted)
 	{
 		if ( footnotes.size() == 0 )
@@ -984,6 +1482,90 @@ class Footnote extends Para
 	}
 	
 }
+//-----------------------------------------------------------------------------
+
+/**
+ * Implements a header of a page
+ * 
+ * @author dr.Dobermann
+ *
+ */
+class Header extends Para
+			 implements TFExcDataLoad {
+
+	public Header(Page page) 
+		throws TFException {
+
+		super(page, 
+			  page.getWidth(), 
+			  page.getHeaderAlign(), 
+			  1,
+			  0,
+			  new int[] {0,0}, 
+			  new int[] {0, 0});
+
+		ResetHeader();
+	}
+	
+	// Functionality
+	//-------------------------------------------------------------------------
+	/**
+	 * Renews header representation
+	 * 
+	 * @throws TFException
+	 */
+	public void ResetHeader() 
+		throws TFException {
+
+		buff.clear();
+		lines.clear();
+		super.isInvalid = true;
+		
+		if ( page.getHeaderHeight() == 0 )
+			return;
+		
+		super.align = page.getHeaderAlign();
+		
+		final String sNum = String.format( "- %d -", page.getPageNum() );
+
+		ParaLine pl;
+		
+		buff.clear();
+		for ( int l = 0; l < page.getHeaderHeight(); l++ ) {
+			if ( l == page.getHeaderLine() ) { 
+				pl = new ParaLine( this, getWidth() );
+				pl.AddString( sNum, new Decor[0] );
+				super.AlignLine( pl, false );
+			}
+			else
+				// add double dashed string as the last line 
+				// of the header if the line has lover index
+				if ( l == page.getHeaderHeight() - 1 && 
+				     page.getHeaderHeight() > 1 && 
+				     page.getHeaderLine() != page.getHeaderHeight() - 1 ) {
+					
+					pl = new ParaLine( this, getWidth() );
+					pl.Pad( Para.PAlign.PA_LEFT, '=', getWidth() );
+				}
+				else
+					pl = new ParaLine( this, getWidth() );
+	
+			buff.add( pl );					
+		}
+		
+		Format();
+	}
+	
+	public void AddString(DecoratedStr str) {}
+	
+	public void AddFootnote(DecoratedStr[] fnote, int fNoteID) {}
+
+	@Override
+	public String getID() {
+		return String.format("HEADER4PAGE[%d]: ", super.page.getPageNum());
+	}
+}
+//-----------------------------------------------------------------------------
 
 /**
  * Represents a pair of string and its decorations
@@ -999,7 +1581,7 @@ class DecoratedStr {
 		this.dpl = dpl;
 	}
 }
-
+//-----------------------------------------------------------------------------
 
 
 /**
@@ -1400,12 +1982,18 @@ class ParaLine
 	
 	/**
 	 * Pads ParaLine with len number of char ch from align side
-	 * @param align  -- side to add. Could be Para.PAlign.PA_LEFT and Para.PAlign.PA_RIGHT
+	 * @param align  -- side to add. Could be Para.PAlign.PA_LEFT, Para.PAlign.PA_RIGHT
+	 *                  and Para.PAlign.PA_CENTER
 	 * @param ch     -- char to pad
 	 * @param len    -- number of chars
 	 */
 	public void Pad(Para.PAlign align, char ch, int len) 
 		throws TFException {
+		
+		if ( align == Para.PAlign.PA_CENTER) {
+			Pad(Para.PAlign.PA_LEFT, ch, len/2);
+			Pad(Para.PAlign.PA_RIGHT, ch, len - len/2);
+		}
 		
 		for ( int i = 0; i < len; i++ )
 			switch ( align ) {
@@ -1417,8 +2005,8 @@ class ParaLine
 					InsertChar(buff.length(), ch);
 					break;
 					
-				case PA_AS_IS :
 				case PA_CENTER :
+				case PA_AS_IS :
 				case PA_FILL :
 					break;
 			}

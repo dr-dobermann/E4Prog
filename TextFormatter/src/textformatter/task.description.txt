@@ -62,7 +62,7 @@ Command list:
 name        | parameters (values) _ defaults _                         | closes the
 description |                                                          | paragraph
 -----------------------------------------------------------------------------------
-?size         height width _ 40 72 _                                     yes
+?size         width height _ 72 40 _                                     yes
 Sets the page size
 
 ?align        type (as_is, left, right, 
