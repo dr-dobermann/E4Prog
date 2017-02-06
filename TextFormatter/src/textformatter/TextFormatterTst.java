@@ -42,6 +42,12 @@ public class TextFormatterTst {
 		}
 
 		testPrepareString();
+		
+		String strt = "This is a test string";
+		
+		System.out.println(StrTest(strt));
+		
+		System.out.println(strt);
 	}
 	
 	private static void testPrepareString() {
@@ -63,6 +69,12 @@ public class TextFormatterTst {
 		
 	}
 	
+	private static String StrTest(String str) {
+		
+		str = str.substring(str.length()/2);
+		
+		return str;
+	}
 }
 
 // end of sentence look up
