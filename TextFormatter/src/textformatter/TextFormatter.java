@@ -29,11 +29,11 @@ public class TextFormatter
 	private @Getter int height = 40;
 	
 	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
+	private @Getter boolean getFullSentence = true;
 	private @Getter int interval = 1;
 	private @Getter int[] spaces = new int[] {0, 0};
 	private @Getter int[] margins = new int[] {0, 0};
 	private @Getter int indent = 3;
-	
 	
 	private int lastNoteID = 1;
 	private int lastPageNum = 1;
@@ -103,7 +103,7 @@ public class TextFormatter
 		pages.add(new Page(this));
 		
 		prevStrStatus = reader.getSeReason();
-		String str = reader.GetRawSentence();
+		String str = reader.GetRawSentence(getFullSentence);
 		
 		while ( str != null ) {
 			
@@ -121,7 +121,7 @@ public class TextFormatter
 						str += String.format("&F+{%d}%d&F-", lastNoteID, lastNoteID);
 						
 						if ( fnLastReadCode == SentenceReader.SEReason.SER_CMD )
-							tmp = reader.GetNonEmptySentence();
+							tmp = reader.GetNonEmptySentence(getFullSentence);
 							if ( tmp != null )
 								str += tmp;	
 					}
@@ -156,7 +156,7 @@ public class TextFormatter
 			}
 			
 			prevStrStatus = reader.getSeReason();
-			str = reader.GetRawSentence();
+			str = reader.GetRawSentence(getFullSentence);
 		}
 	}
 	
@@ -264,18 +264,23 @@ public class TextFormatter
 				switch ( params[1] ) {
 					case "as_is" :
 						align = Para.PAlign.PA_AS_IS;
+						getFullSentence = false;
 						break;
 					case "left" :
 						align = Para.PAlign.PA_LEFT;
+						getFullSentence = true;
 						break;
 					case "center" :
 						align = Para.PAlign.PA_CENTER;
+						getFullSentence = true;
 						break;
 					case "right" :
 						align = Para.PAlign.PA_RIGHT;
+						getFullSentence = true;
 						break;
 					case "fill" :
 						align = Para.PAlign.PA_FILL;
+						getFullSentence = true;
 						break;
 					default :
 						throw new
@@ -643,6 +648,7 @@ class SentenceReader
 					SER_PUNCT,
 			  		SER_CMD,
 			  		SER_EMPTY_LINE,
+			  		SER_EOL,
 			  		SER_STREAM_END
 	};
   		
@@ -667,14 +673,15 @@ class SentenceReader
 	 * 
 	 * @throws TFException
 	 */
-	public String GetRawSentence() 
+	public String GetRawSentence(boolean getFullSentence) 
 		throws TFException {
 
 		final Pattern cmdName = Pattern.compile("^\\?(\\w+)");
-		final Pattern sentenceEnd = Pattern.compile("\\.\"\\)|\\?\"\\)|!\"\\)|" + // ."), ?"), !") at the end of sentence 
-												    "\\.\\)|\\?\\)|!\\)|" +       // .),  ?)   !)
-												    "(!+\\?+)+|(\\?+!+)+|" +      // !?, ?!
-													"\\.+|\\?+|!+");              // ., ..., ?, !
+		final Pattern sentenceEnd = Pattern.compile("\"\\?\"\\.|" +						   // "?".	
+				                                    "\\.\"\\)\\W|\\?\"\\)\\W|!\"\\)\\W|" + // ."), ?"), !") at the end of sentence 
+												    "\\.\\)\\W|\\?\\)\\W|!\\)\\W|" +       // .),  ?)   !)
+												    "(!+\\?+)+\\W|(\\?+!+)+\\W|" +         // !?, ?!
+													"\\.+\\W|\\?+\\W|!+\\W");              // ., ..., ?, !
 		Matcher m;
 		
 		if ( seReason == SEReason.SER_STREAM_END )
@@ -689,67 +696,84 @@ class SentenceReader
 			seReason = SEReason.SER_EMPTY_LINE;
 			return "";
 		}
-		
+
 		StringBuilder sb = new StringBuilder("");
 
+		// if there is no need to look for a formal end of the sentence but just for the end of the line
+		if ( !getFullSentence && uSen.length() > 0 ) {
+			sb.append(uSen);
+			uSen.delete(0, uSen.length());
+			
+			return sb.toString();
+		}
+		
 		String str = ReadLine();
 		
 		while ( str != null ) {
 			// if empty string is read and unfinished string is not empty,
 			// return unfinished sentence and fire emptyLine flag.
 			// if unfinished sentence is empty, return it
-			if ( str == "" )
+			if ( str.trim().length() == 0 ) {
 				if ( uSen.length() > 0 ) {
 					sb.append(uSen);
 					uSen.delete(0, uSen.length());
 					emptyLine = true;
 					seReason = SEReason.SER_EMPTY_LINE;
-					break;
 				}
-				else 
-					break;
-			
-			// Check on sentence end or command start.
-			// If sentence end is occurred, return substring with it and
-			// previous buffer. Rest of the string save as unfinished sentence
-			m = sentenceEnd.matcher(str);
-			if ( m.find() ) {
-				if ( uSen.length() > 0 ) {
-					sb.append(uSen);
-					uSen.delete(0, uSen.length());
-				}
-				sb.append(str.substring(0, m.end()));
-				uSen.append(str.substring(m.end()));
-				seReason = SEReason.SER_PUNCT;
 				
 				break;
 			}
 			
-			// If command starts, and unfinished sentence is not empty, return it
-			m = cmdName.matcher(str);
-			if ( m.find() ) {
-				if ( uSen.length() > 0 ) {
-					sb.append(uSen);
-					uSen.delete(0, uSen.length());
-					uSen.append(str);
-					seReason = SEReason.SER_CMD;
+			if ( getFullSentence ) {
+				// Check on sentence end or command start.
+				// If sentence end is occurred, return substring with it and
+				// previous buffer. Rest of the string save as unfinished sentence
+				m = sentenceEnd.matcher(str);
+				if ( m.find() ) {
+					if ( uSen.length() > 0 ) {
+						sb.append(uSen);
+						uSen.delete(0, uSen.length());
+					}
+					sb.append(str.substring(0, m.end()));
+					uSen.append(str.substring(m.end()));
+					seReason = SEReason.SER_PUNCT;
+					
 					break;
-				}	
+				}
+				
+				// If command starts, and unfinished sentence is not empty, return it
+				m = cmdName.matcher(str);
+				if ( m.find() ) {
+					if ( uSen.length() > 0 ) {
+						sb.append(uSen);
+						uSen.delete(0, uSen.length());
+						uSen.append(str);
+						seReason = SEReason.SER_CMD;
+						break;
+					}	
+				}
+				
+				// append the str to an unfinished sentence
+				// and read next line;
+					uSen.append(str);
+					str = ReadLine();
 			}
-			
-			// if unfinished sentence is empty, save the str as a unfinished sentence
-			// and read next line;
-			uSen.append(str);
-			str = ReadLine();
+			else {
+					sb.append(str);
+					seReason = SEReason.SER_EOL;
+					break;
+				}
 		}
 		
-		if ( str == null )
+		if ( str == null ) {
 			if ( uSen.length() > 0 ) {
 				sb.append(uSen);
 				uSen.delete(0, uSen.length());
-				seReason = SEReason.SER_STREAM_END;
 			}
-				
+
+			seReason = SEReason.SER_STREAM_END;
+			return null;
+		}
 		
 		return sb.toString();
 	}
@@ -762,15 +786,15 @@ class SentenceReader
 	 * 
 	 * @throws TFException
 	 */
-	public String GetNonEmptySentence() 
+	public String GetNonEmptySentence(boolean getFullSentence) 
 		throws TFException {
 		
 		String str;
 		
-		str = GetRawSentence();
+		str = GetRawSentence(getFullSentence);
 		
 		while ( str != null && str.length() == 0 )
-			str = GetRawSentence();
+			str = GetRawSentence(getFullSentence);
 		
 		return str;
 		
@@ -874,6 +898,8 @@ class Page
 	private @Getter int headerLine;
 	private Header header;
 	
+	private @Getter boolean isClosed = false;
+	
 	
 	public Page(TextFormatter tf) 
 		throws TFException {
@@ -882,12 +908,11 @@ class Page
 		
 		textFormatter = tf;
 		
-		if ( tf.getHeaderHeight() > 0 ) {
-			header = new Header( this );
-			paragraphs.add( header );
-			
+		header = new Header( this );
+		paragraphs.add( header );
+
+		if ( headerHeight > 0 )
 			header.ResetHeader();
-		}
 		
 		width = tf.getWidth();
 		height = tf.getHeight();
@@ -952,8 +977,43 @@ class Page
 	 * 
 	 * @param next -- Next page to consume the rest of the current page
 	 */
-	public void Close(Page next) {
-		// TODO: finish the functionality
+	public void Close( Page next )
+		throws TFException {
+
+		Format();
+		
+		isClosed = true;
+		
+		if ( linesLeft >= 0 )
+			return;
+		
+		while ( linesLeft < 0 ) {
+			
+			
+		}
+		
+	}
+	
+	/**
+	 * Formats page and calculate its actual length
+	 * 
+	 * @throws TFException
+	 */
+	private void Format() 
+		throws TFException {
+		
+		boolean hasFootnote = false;
+		linesLeft = height;
+		
+		for ( Para p : paragraphs ) {
+			p.Format();
+			linesLeft -= p.GetLinesCount(true, true);
+			if ( p.GetFootnotesCount() > 0 )
+				hasFootnote = true;
+		}
+		
+		if ( hasFootnote )
+			linesLeft--;		
 	}
 	
 	/**
@@ -963,9 +1023,14 @@ class Page
 	 * 
 	 * @throws TFException
 	 */
-	public void SetWidth(int newWidth)
+	public void SetWidth( int newWidth )
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		if ( newWidth > width )
 			throw new
 				TFException(getID(), 
@@ -987,6 +1052,11 @@ class Page
 	public void SetHeader() 
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		if ( textFormatter.getHeaderHeight() > 1 ) {
 			
 			headerHeight = textFormatter.getHeaderHeight();
@@ -1012,9 +1082,14 @@ class Page
 	 * 
 	 * @throws TFException
 	 */
-	public void FeedLines(int lines, boolean withInterval) 
+	public void FeedLines( int lines, boolean withInterval ) 
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		GetLastPara().FeedLines(lines, withInterval);
 		
 		AddNewPara();
@@ -1027,8 +1102,13 @@ class Page
 	 * 
 	 * @throws TFException
 	 */
-	public void SetAlign(Para.PAlign newAlign ) 
+	public void SetAlign( Para.PAlign newAlign ) 
 		throws TFException {
+
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
 		
 		align = newAlign;
 		
@@ -1045,6 +1125,11 @@ class Page
 	public void SetParaSettings( int indent, int[] spaces ) 
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		if ( spaces[0] < 0 || spaces[1] < 0)
 			throw new
 			TFException( getID(),
@@ -1086,6 +1171,11 @@ class Page
 	public void SetMargins( int[] margins ) 
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		if ( margins[0] < 0 || margins[1] < 0 || margins[0] + margins[1] > width )
 			throw new
 			TFException( getID(),
@@ -1108,6 +1198,11 @@ class Page
 	public void SetInterval( int newInt ) 
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		if ( newInt  < 0 || newInt > height )
 			throw new
 			TFException( getID(),
@@ -1129,6 +1224,11 @@ class Page
 	public void SetPageNum( int pNum ) 
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		if ( pNum < 0 )
 			throw new
 			TFException( getID(),
@@ -1150,6 +1250,11 @@ class Page
 	public void AddFootnote( String[] fnote, int id )
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+			TFException(getID(), 
+					    "The page is closed already!!!");
+
 		DecoratedStr[] dfn = new DecoratedStr[fnote.length];
 		
 		for ( int f = 0; f < fnote.length; f++ ) 
@@ -1157,7 +1262,7 @@ class Page
 		
 		GetLastPara().AddFootnote(dfn, id);
 	}
-	
+		
 	/* 
 	 * @see textformatter.TFExcDataLoad#getID()
 	 */
@@ -1251,7 +1356,7 @@ class Para implements
 	 * @param str 		-- string to add
 	 * @param decors	-- DecoPair placed on the string
 	 */
-	public void AddString(DecoratedStr str) 
+	public void AddString( DecoratedStr str ) 
 		throws TFException {
 		
 		if ( closed )
@@ -1261,11 +1366,12 @@ class Para implements
 		isInvalid = true;
 		
 		ParaLine pl = new ParaLine(this, str.str.length() + 2);
+		pl.AddString(str);
 		buff.add(pl);
 		
 		// add double spaces into the end of the every sentence
-		if ( str.str.length() > 0 )
-			pl.AddString(str + "  ", new Decor[0]);
+		if ( str.str.length() > 0 && align != Para.PAlign.PA_AS_IS )
+			pl.AddString("  ", new Decor[0]);
 	}
 	
 	/**
@@ -1276,7 +1382,7 @@ class Para implements
 	 * 
 	 * @throws TFException
 	 */
-	public void AddFootnote(DecoratedStr[] footnote, int fNoteID) 
+	public void AddFootnote( DecoratedStr[] footnote, int fNoteID ) 
 		throws TFException {
 
 		if ( closed )
@@ -1287,7 +1393,7 @@ class Para implements
 		
 		if ( footnote.length > 0 ) {
 			
-			Footnote fnote = new Footnote(page, this, new int[] {-1, buff.size() - 1}, fNoteID, page.getWidth());
+			Footnote fnote = new Footnote(page, this, new int[] {-1, buff.size() - 1}, fNoteID, width);  // TODO: correct it to page.getWidth()
 			for ( DecoratedStr fs : footnote )
 				fnote.AddString(fs);
 			
@@ -1315,6 +1421,8 @@ class Para implements
 		
 		for ( ParaLine pl : buff ) {
 			
+			System.out.printf( "ParaLine [%s]\n", pl.GetStr() );
+			
 			if ( pl.GetLength() == 0 ) {
 				lines.add(pl);
 				AddInterval();
@@ -1325,12 +1433,16 @@ class Para implements
 			lineNo = buff.indexOf(pl);
 
 			
-			maxLen = width - 
-					 margins[1] - 
-					 (lines.size() == 0 ? margins[0] + indent : margins[0]);
-			
 			while ( line.GetLength() > 0 ) {
-				
+				System.out.println( line.GetStr() );
+
+				maxLen = width - 
+						 margins[1] - 
+						 (lines.size() == 0 ? margins[0] + indent : margins[0]);
+								
+				// add new line if lines list is empty or 
+				//              if last line in lines is full or
+				//              if the align is as_is
 				if ( lines.size() == 0 ||
 					 lines.get(lines.size() - 1).GetLength() == width ||
 					 align == Para.PAlign.PA_AS_IS
@@ -1341,19 +1453,24 @@ class Para implements
 				
 				if ( maxLen >= line.GetLength() ) {
 					newLine.JoinLine(line);
+					if ( Para.PAlign.PA_AS_IS != align && lineNo == buff.size() - 1 )
+						AlignLine( newLine, 
+								   line.GetLength() == 0 && lineNo == buff.size() - 1 );
 					continue;
 				}
 				else { // add part of line from 0 up to last space in it
 					int len = line.getBuff().substring(0, maxLen).lastIndexOf(' ');
-					newLine.JoinLine(line.CutHead( len == -1 ? 0 : len ));
-		
+					newLine.JoinLine(line.CutHead( len < 0 ? 0 : len ));
+
+					LinkFootnotes(lineNo);
+					
 					if ( Para.PAlign.PA_AS_IS != align )
 						AlignLine(newLine,
 								 line.GetLength() == 0 && lineNo == buff.size() - 1); // is it the last line of paragraph?
 					
-					LinkFootnotes(lineNo);
-					
-					lines.add(new ParaLine(this, width));
+					// if it's not fully processed last buffer line, then add new line into formatted lines list
+					if ( !(line.GetLength() == 0  && lineNo == buff.size() - 1) )
+						lines.add(new ParaLine(this, width));
 				}
 			}
 		}
@@ -1399,7 +1516,7 @@ class Para implements
 	 * 
 	 * @param buffLineNo -- number of buffer line processing
 	 */
-	private void LinkFootnotes(int buffLineNo) {
+	private void LinkFootnotes( int buffLineNo ) {
 
 		Footnote[] fl = GetFNotesOnLine(buffLineNo, false);
 		ParaLine line = lines.get(lines.size() - 1);
@@ -1432,21 +1549,25 @@ class Para implements
 	 * 
 	 * @throws TFException
 	 */
-	protected void AlignLine(ParaLine pl, boolean lastLine) 
+	protected void AlignLine( ParaLine pl, boolean lastLine ) 
 		throws TFException {
 		
-		if ( align != Para.PAlign.PA_AS_IS )
+		if ( align == Para.PAlign.PA_AS_IS )
 			throw new
 				TFException( getID(), "It's forbidden to align lines with PA_AS_IS setting on!!!");
 		
-		// remove leading or spaces for every line except the first one
+		// remove leading or trailing spaces for every line except for the first one
 		// if there is positive indent, then only trim the right side
-		if ( lines.size() == 1 && indent > 0 )
-			pl.Trim(ParaLine.TrimSide.TS_RIGHT);
-		else
+		//if ( lines.size() == 1 && indent > 0 )
+		//	pl.Trim(ParaLine.TrimSide.TS_RIGHT);
+		//else
 			pl.Trim(ParaLine.TrimSide.TS_BOTH);
+
+		// adds left margins
+		if ( margins[0] > 0 )
+			pl.Pad(Para.PAlign.PA_LEFT, ' ', margins[0] + (lines.size() == 1 ? indent : 0) );
 		
-		int fillSpace = width - pl.GetLength() - margins[1] - ( indent < 0 ? margins[0] + indent : margins[0] );
+		int fillSpace = width - pl.GetLength() - margins[1] - (lines.size() == 1 ? indent : 0);
 				
 		switch ( align ) {
 		
@@ -1454,11 +1575,11 @@ class Para implements
 				break;
 				
 			case PA_LEFT :
-				pl.Pad(Para.PAlign.PA_LEFT, ' ', fillSpace);
+				pl.Pad(Para.PAlign.PA_RIGHT, ' ', fillSpace);
 				break;
 			
 			case PA_RIGHT :
-				pl.Pad(Para.PAlign.PA_RIGHT, ' ', fillSpace);
+				pl.Pad(Para.PAlign.PA_LEFT, ' ', fillSpace);
 				break;
 			
 			case PA_CENTER :
@@ -1467,41 +1588,41 @@ class Para implements
 			
 			case PA_FILL :
 				
-				if ( !lastLine ) { // do not align the last line
+				if ( !lastLine && fillSpace > 0 ) { // do not align the last or full line
 				
 					Map<String, Integer[]> words = new HashMap<String, Integer[]>(); 
 					boolean firstWord = true;
 					// look for words
-					Matcher m = Pattern.compile("\\p{Punct}*\\w+\\p{Punct}*").matcher(pl.getBuff());
+					Matcher m = Pattern.compile("[\\Wp{Punct}\\p{Blank}]*\\w+[\\p{Punct}\\p{Blank}]*").matcher(pl.getBuff());
 				
 					while ( m.find() )
 					{
-						if ( firstWord )
+						if ( firstWord ) // we don't add spaces before the first word
 							firstWord = false;
 						else
 							words.put(pl.getBuff().substring(m.start(), m.end()), new Integer[] {m.start(), 0});
 					}
 					
 					int maxSpaces = 1;
-					int idx, pos;
+					int pos, 
+					    shift = 0;
 					int tries = 0;
 					String word;
 					while ( fillSpace > 0 ) {
 						
-						idx = (int)(Math.random() * (words.size() - 1));
-						word = words.keySet().toArray(new String[0])[idx];
+						word = words.keySet().toArray(new String[0])[(int)(Math.random() * (words.size() - 1))];
 						pos = words.get(word)[0];
 						
 						if ( words.get(word)[1] < maxSpaces ) {
-							words.put(word, new Integer[] {pos + 1, maxSpaces});
+							words.put(word, new Integer[] {pos, maxSpaces});
 							// insert space before the word
-							pl.getBuff().insert(pl.getBuff().substring(pos, pl.GetLength() - 1).indexOf(word) + pos, ' ');
+							pl.InsertChar(pos + shift++, ' '); 
 							fillSpace--;
 							tries = 0;
 						}
 						else 
 							if ( tries++ > 2 ) {// if it not succeeded to find appropriate position three times 
-								maxSpaces++;   // increase number of allowed spaces before the word.
+								maxSpaces++;    // increase number of allowed spaces before the word.
 								tries = 0;
 							}
 					}
@@ -1509,9 +1630,7 @@ class Para implements
 				break;
 		}
 		
-		// adds margins
-		if ( margins[0] > 0 )
-			pl.Pad(Para.PAlign.PA_LEFT, ' ', indent < 0 ? margins[0] + indent : margins[0]);
+		// adds right margins
 		if ( margins[1] > 0 )
 			pl.Pad(Para.PAlign.PA_RIGHT, ' ', margins[1]);
 		
@@ -1541,7 +1660,7 @@ class Para implements
 	 * 
 	 * @return an array of footnotes, linked to the line
 	 */
-	private Footnote[] GetFNotesOnLine(int line, boolean inFormatted)
+	private Footnote[] GetFNotesOnLine( int line, boolean inFormatted )
 	{
 		if ( footnotes.size() == 0 )
 			return new Footnote[0];
@@ -1567,7 +1686,7 @@ class Para implements
 	 * 
 	 * @throws TFException
 	 */
-	public ParaLine[] GetLines(boolean spaced, boolean withFNotes)
+	public ParaLine[] GetLines( boolean spaced, boolean withFNotes )
 		throws TFException 	{
 		
 		if ( isInvalid )
@@ -1602,7 +1721,64 @@ class Para implements
 		return ll.toArray(new ParaLine[0]);
 	}
 	
+	/**
+	 * Returns number of lines in formatted or buffered zones
+	 * 
+	 * @param fromFormatted -- if it's true, count of formatted lines returns, 
+	 *                         if it's false, count of buffered lines returns.
+	 * @param withFootnotes -- if it's true the count of footnotes lines also takes
+	 *                         into account
+	 *                         
+	 * @return number of paragraph lines
+	 */
+	public int GetLinesCount( boolean fromFormatted, boolean withFootnotes ) {
+		
+		int fnLines = 0;
+		if ( !isInvalid && footnotes.size() > 0 )
+			for ( Footnote fNote : footnotes )
+				fnLines += fNote.GetLinesCount(fromFormatted, false);
 
+		if ( !fromFormatted )
+			return buff.size() + fnLines;
+		
+		
+		return lines.size() + fnLines;
+	}
+
+	/**
+	 * Returns the number of footnotes linked to the paragraph
+	 * 
+	 * @return number of linked footnotes
+	 */
+	public int GetFootnotesCount() {
+		
+		return footnotes.size(); 
+	}
+
+	/**
+	 * Return the ParaLines of footnote 
+	 * 
+	 * @param idx -- footnote index to get
+	 * 
+	 * @return an array of ParaLines
+	 * 
+	 * @throws TFException
+	 */
+	public ParaLine[] GetFootnote( int idx ) 
+		throws TFException {
+		
+		if ( idx < 0 || idx > footnotes.size() - 1 )
+			throw new
+				TFException( getID(), 
+						     "[GetFootnote] Invalid footnote index %d!!!", 
+						     idx );
+		
+		if ( isInvalid )
+			Format();
+		
+		return footnotes.get(idx).GetLines(false, false);
+	}
+	
 	@Override
 	public String toString() {
 		
@@ -1628,10 +1804,7 @@ class Para implements
 		return sb.toString();
 			
 	}
-	
-	
-	
-	
+		
 	/*
 	 * @see textformatter.TFExcDataLoad#getID()
 	 */
@@ -1654,8 +1827,8 @@ class Para implements
 class Footnote extends Para 
                implements TFExcDataLoad {
 	
-	private final static String fNoteFmt = " %d3) ";
-	private final static int fNoteFmtLen = String.format(fNoteFmt, 1).length(); 
+	private final static String fNoteFmt = " %d) ";
+	private final static int fNoteFmtLen = String.format(fNoteFmt, 100).length(); // max 100 footnotes on the page
 	
 	public final static String fNoteMark = "%d";
 	
@@ -1669,7 +1842,7 @@ class Footnote extends Para
 	 * @param page
 	 * @param width
 	 */
-	public Footnote(Page page, Para para, int[] lineNo, int id, int width) 
+	public Footnote( Page page, Para para, int[] lineNo, int id, int width ) 
 		throws TFException {
 		
 		super(page, 
@@ -1684,7 +1857,7 @@ class Footnote extends Para
 		this.para = para;
 		this.lineNo = lineNo;
 		
-		ParaLine pl = new ParaLine(this, page.getWidth());
+		ParaLine pl = new ParaLine(this, super.getWidth()); 
 		
 		pl.AddString(String.format(fNoteFmt, noteID), new Decor[0]);
 		buff.add(pl);
@@ -1701,16 +1874,16 @@ class Footnote extends Para
 	 */
 	public void SetLine( int newLine, boolean inBuffer ) {
 		if ( inBuffer )
-			lineNo[0] = newLine;
-		else
 			lineNo[1] = newLine;
+		else
+			lineNo[0] = newLine;
 	}
 	
 	@Override
-	public void AddFootnote(DecoratedStr[] footnote, int fNoteID) 
+	public void AddFootnote( DecoratedStr[] footnote, int fNoteID ) 
 			throws TFException {} // footnote couldn't have footnote
 
-	
+	public void FeedLines( int lNum, boolean withInterval ) {}
 	
 	@Override
 	public String getID() {
@@ -1796,6 +1969,8 @@ class Header extends Para
 	
 	public void AddFootnote(DecoratedStr[] fnote, int fNoteID) {}
 
+	public void FeedLines( int lNum, boolean withInterval ) {}
+	
 	@Override
 	public String getID() {
 		return String.format("HEADER4PAGE[%d]: ", super.page.getPageNum());
@@ -2116,7 +2291,7 @@ class ParaLine
 	public ParaLine CutHead( int length ) 
 		throws TFException {
 		
-		ParaLine pl = new ParaLine(para, width);
+		ParaLine pl = new ParaLine( para, width );
 		if ( length == 0 )
 			return pl;
 		

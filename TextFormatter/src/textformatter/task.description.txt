@@ -1,14 +1,21 @@
+?align as_is
 Task description:
 ====================
-This task is taken from the book Etudes for Programmers by Charles Wetherell.
-This is a third task in the book.
 
-Create a text formatter which could process an input text stream and provide an 
+?align fill
+This task is taken from the book Etudes for Programmers by Charles Wetherell
+?footnote 1
+(c) 1987 by Prentice Hall, Inc., Englewood Cliffs, New Jersey 07632.
+This is a third task from the book.
+
+The task is about creating a text formatter which could process an input text stream and provide an 
 output text stream formatted according to formatting commands in input stream.
 It's necessary to create a visualization tool for presenting the results.
 
 Every command starts at first position of input steam string from letter "?".
 
+
+?align as_is
 Notes:
 ===================
 1. The task conditions were little bit changed from original assignment 
@@ -25,6 +32,7 @@ Notes:
 5. Page could not become wider than it was initially set.
 6. Footnotes takes initial width of the page (max width) and does not uses
    related paragraph width.
+
 
 
 Strategy:
@@ -121,11 +129,16 @@ the rest of it moves to the next page
 ?alias         new_name old_name                                         no
 Add alias for the symbol to mask it further
 
-Formatting commands:
+Decoration commands:
 ===================
-There are could be text formatting commands inside the paragraph.
+?align fill
+There are could be text decoration commands inside the paragraph.
 They look as &<command_name>+/-. 
 <command_name> could consists of a few commands combined
+For some commands it could be possible to provide additional information in 
+{} after the starting command.
+?footnote 1
+Only realized for footnotes yet.
 ---------------------------------------------------------------------------
 code     |  description
 ---------------------------------------------------------------------------
