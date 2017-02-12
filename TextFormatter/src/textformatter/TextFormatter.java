@@ -1421,8 +1421,6 @@ class Para implements
 		
 		for ( ParaLine pl : buff ) {
 			
-			System.out.printf( "ParaLine [%s]\n", pl.GetStr() );
-			
 			if ( pl.GetLength() == 0 ) {
 				lines.add(pl);
 				AddInterval();
@@ -1431,15 +1429,9 @@ class Para implements
 			
 			line = pl.Copy();
 			lineNo = buff.indexOf(pl);
-
 			
 			while ( line.GetLength() > 0 ) {
-				System.out.println( line.GetStr() );
 
-				maxLen = width - 
-						 margins[1] - 
-						 (lines.size() == 0 ? margins[0] + indent : margins[0]);
-								
 				// add new line if lines list is empty or 
 				//              if last line in lines is full or
 				//              if the align is as_is
@@ -1448,8 +1440,12 @@ class Para implements
 					 align == Para.PAlign.PA_AS_IS
 					)
 					lines.add(new ParaLine(this, width));
-				
+
 				newLine = lines.get(lines.size() - 1);
+
+				maxLen = width - newLine.GetLength() -  
+						 margins[1] - margins[0] -
+						 (lines.size() == 1 ? indent : 0);
 				
 				if ( maxLen >= line.GetLength() ) {
 					newLine.JoinLine(line);
@@ -1557,17 +1553,13 @@ class Para implements
 				TFException( getID(), "It's forbidden to align lines with PA_AS_IS setting on!!!");
 		
 		// remove leading or trailing spaces for every line except for the first one
-		// if there is positive indent, then only trim the right side
-		//if ( lines.size() == 1 && indent > 0 )
-		//	pl.Trim(ParaLine.TrimSide.TS_RIGHT);
-		//else
-			pl.Trim(ParaLine.TrimSide.TS_BOTH);
+		pl.Trim(ParaLine.TrimSide.TS_BOTH);
 
 		// adds left margins
 		if ( margins[0] > 0 )
-			pl.Pad(Para.PAlign.PA_LEFT, ' ', margins[0] + (lines.size() == 1 ? indent : 0) );
+			pl.Pad( Para.PAlign.PA_LEFT, ' ', margins[0] + (lines.size() == 1 ? indent : 0) );
 		
-		int fillSpace = width - pl.GetLength() - margins[1] - (lines.size() == 1 ? indent : 0);
+		int fillSpace = width - pl.GetLength() - margins[1];
 				
 		switch ( align ) {
 		
@@ -1590,35 +1582,38 @@ class Para implements
 				
 				if ( !lastLine && fillSpace > 0 ) { // do not align the last or full line
 				
-					Map<String, Integer[]> words = new HashMap<String, Integer[]>(); 
+					List<Integer[]> words = new ArrayList<Integer[]>(); 
 					boolean firstWord = true;
 					// look for words
-					Matcher m = Pattern.compile("[\\Wp{Punct}\\p{Blank}]*\\w+[\\p{Punct}\\p{Blank}]*").matcher(pl.getBuff());
+					Matcher m = Pattern.compile("[\\Wp{Punct}\\p{Blank}]*[\\w'-]+[\\p{Punct}\\p{Blank}]*").matcher(pl.getBuff());
 				
 					while ( m.find() )
 					{
 						if ( firstWord ) // we don't add spaces before the first word
 							firstWord = false;
 						else
-							words.put(pl.getBuff().substring(m.start(), m.end()), new Integer[] {m.start(), 0});
+							words.add(new Integer[] {m.start(), 0});
 					}
 					
 					int maxSpaces = 1;
-					int pos, 
-					    shift = 0;
+					int pos, idx;
 					int tries = 0;
-					String word;
 					while ( fillSpace > 0 ) {
 						
-						word = words.keySet().toArray(new String[0])[(int)(Math.random() * (words.size() - 1))];
-						pos = words.get(word)[0];
+						idx = (int)(Math.random() * (words.size() - 1));
+						pos = words.get(idx)[0];
 						
-						if ( words.get(word)[1] < maxSpaces ) {
-							words.put(word, new Integer[] {pos, maxSpaces});
+						if ( words.get(idx)[1] < maxSpaces ) {
+							words.get(idx)[0] = pos + 1;
+							words.get(idx)[1] = maxSpaces;
 							// insert space before the word
-							pl.InsertChar(pos + shift++, ' '); 
+							pl.InsertChar( pos, ' ');
 							fillSpace--;
 							tries = 0;
+							
+							// shift all words after it for one space
+							for ( int i = idx + 1; i < words.size(); i++ )
+								words.get(i)[0] = words.get(i)[0] + 1;
 						}
 						else 
 							if ( tries++ > 2 ) {// if it not succeeded to find appropriate position three times 
@@ -1827,8 +1822,8 @@ class Para implements
 class Footnote extends Para 
                implements TFExcDataLoad {
 	
-	private final static String fNoteFmt = " %d) ";
-	private final static int fNoteFmtLen = String.format(fNoteFmt, 100).length(); // max 100 footnotes on the page
+	private final static String fNoteFmt = "%3d) ";
+	private final static int fNoteFmtLen = String.format(fNoteFmt, 1).length(); // max 100 footnotes on the page
 	
 	public final static String fNoteMark = "%d";
 	
@@ -1850,8 +1845,8 @@ class Footnote extends Para
 			  Para.PAlign.PA_LEFT, 
 			  1,
 			  -fNoteFmtLen,
-			  new int[] {0,0}, 
-			  new int[] {fNoteFmtLen + 1, 0});
+			  new int[] {0, 0}, 
+			  new int[] {fNoteFmtLen + 2, 0});
 		
 		noteID = id;		
 		this.para = para;

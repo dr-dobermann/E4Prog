@@ -32,6 +32,7 @@ public class TextFormatterTst {
 		// ReaderTest();
 		
 		TestPara();
+		
 	}
 
 	private static void TestRegExp() {
@@ -100,10 +101,10 @@ public class TextFormatterTst {
 				 "Then we returned back. Mike had his lunch, so did we.",  
 				};
 		try {
-			Para P1 = new Para( null, 50, Para.PAlign.PA_RIGHT, 1, 0, new int[] {0,1}, new int[] {0, 0} );
+			Para P1 = new Para( null, 60, Para.PAlign.PA_RIGHT, 1, 0, new int[] {0,1}, new int[] {0, 0} );
 			P1.AddString( ParaLine.PrepareString( p1[0] ) );
 			
-			Para P2 = new Para( null, 50, Para.PAlign.PA_FILL, 1, 0, new int[] {0,1}, new int[] {5, 0} );
+			Para P2 = new Para( null, 60, Para.PAlign.PA_FILL, 1, 5, new int[] {0,1}, new int[] {5, 0} );
 			P2.AddString( ParaLine.PrepareString( p2[0] ) );
 			P2.AddString( ParaLine.PrepareString( p2[1] ) );
 			P2.AddString( ParaLine.PrepareString( p2[2] ) );

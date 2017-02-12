@@ -3,7 +3,7 @@ Task description:
 ====================
 
 ?align fill
-This task is taken from the book Etudes for Programmers by Charles Wetherell
+This task was taken from the book Etudes for Programmers by Charles Wetherell
 ?footnote 1
 (c) 1987 by Prentice Hall, Inc., Englewood Cliffs, New Jersey 07632.
 This is a third task from the book.
