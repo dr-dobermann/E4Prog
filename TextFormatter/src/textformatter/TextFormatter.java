@@ -1393,7 +1393,7 @@ class Para implements
 		
 		if ( footnote.length > 0 ) {
 			
-			Footnote fnote = new Footnote(page, this, new int[] {-1, buff.size() - 1}, fNoteID, width);  // TODO: correct it to page.getWidth()
+			Footnote fnote = new Footnote(page, this, new int[] {-1, buff.size() - 1}, fNoteID, page != null ? page.getWidth() : width);
 			for ( DecoratedStr fs : footnote )
 				fnote.AddString(fs);
 			

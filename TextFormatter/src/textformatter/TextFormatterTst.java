@@ -111,11 +111,11 @@ public class TextFormatterTst {
 			P2.AddFootnote( new DecoratedStr[] { ParaLine.PrepareString( n2[0] ) }, 1);
 			P2.AddString( ParaLine.PrepareString( p2[3] ) );
 			
-			Para P3 = new Para( null, 50, Para.PAlign.PA_CENTER, 2, 5, new int[] {1,3}, new int[] {10, 10} );
+			Para P3 = new Para( null, 50, Para.PAlign.PA_CENTER, 1, 5, new int[] {1,3}, new int[] {10, 10} );
 			P3.AddString( ParaLine.PrepareString( p3[0] ) );
 			P3.AddString( ParaLine.PrepareString( p3[1] ) );
 			
-			Para P4 = new Para( null, 50, Para.PAlign.PA_AS_IS, 1, 0, new int[] {0,0}, new int[] {0, 0} );
+			Para P4 = new Para( null, 50, Para.PAlign.PA_RIGHT, 1, 0, new int[] {0,0}, new int[] {0, 0} );
 			P4.AddString( ParaLine.PrepareString( p4[0] ) );
 			
 			Para P5 = new Para( null, 50, Para.PAlign.PA_FILL, 1, -5, new int[] {0,0}, new int[] {10, 0} );
@@ -181,14 +181,3 @@ public class TextFormatterTst {
 		}
 	}
 }
-
-/*
- 				 Page page, 
-			     int width,
-			     PAlign align,
-			     int interval,
-			     int indent,
-			     int[] spaces,
-			     int[] margins
- 
-*/
