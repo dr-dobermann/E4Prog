@@ -883,7 +883,7 @@ class Page
 	private @Getter int currWidth = width;
 	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
 	
-	private @Getter int pageNum;
+	private @Getter int pageNum = 1;
 	
 	private @Getter int[] spaces = new int[] {0, 0};
 	private @Getter int interval = 1;
@@ -893,37 +893,40 @@ class Page
 	private List<Para> paragraphs = new ArrayList<Para>();
 	private @Getter int linesLeft = height;
 	
-	private @Getter int headerHeight = 0;
+	private @Getter int headerHeight = 3;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
-	private @Getter int headerLine;
-	private Header header;
+	private @Getter int headerLine = 0;
+	private @Getter Header header;
 	
 	private @Getter boolean isClosed = false;
 	
 	
 	public Page(TextFormatter tf) 
 		throws TFException {
+
+		if ( tf != null ) {
 		
-		pageNum = tf.GetLastPageNum();
-		
-		textFormatter = tf;
+			pageNum = tf.GetLastPageNum();
+			
+			textFormatter = tf;
+
+			width = tf.getWidth();
+			height = tf.getHeight();
+			
+			indent = tf.getIndent();
+			interval = tf.getInterval();
+			spaces[0] = tf.getSpaces()[0];
+			spaces[1] = tf.getSpaces()[1];
+			margins[0] = tf.getMargins()[0];
+			margins[1] = tf.getMargins()[1];
+		}
 		
 		header = new Header( this );
 		paragraphs.add( header );
 
 		if ( headerHeight > 0 )
 			header.ResetHeader();
-		
-		width = tf.getWidth();
-		height = tf.getHeight();
-		
-		indent = tf.getIndent();
-		interval = tf.getInterval();
-		spaces[0] = tf.getSpaces()[0];
-		spaces[1] = tf.getSpaces()[1];
-		margins[0] = tf.getMargins()[0];
-		margins[1] = tf.getMargins()[1];
-		
+				
 		AddNewPara();
 	}
 	
@@ -1905,7 +1908,7 @@ class Header extends Para
 			  page.getHeaderAlign(), 
 			  1,
 			  0,
-			  new int[] {0,0}, 
+			  new int[] {0, 0}, 
 			  new int[] {0, 0});
 
 		ResetHeader();
@@ -2301,8 +2304,8 @@ class ParaLine
 				decors.remove(dec);
 			}
 		
+		ShiftDecors(0, -length);
 		buff.delete(0, length);
-		ShiftDecors(0, length);
 		
 		return pl;
 	}
@@ -2439,8 +2442,8 @@ class ParaLine
 			
 			if ( buff.charAt(pos) == ' ' ) {
 				
-				buff.deleteCharAt(pos);
 				ShiftDecors(pos, -1);
+				buff.deleteCharAt(pos);
 			
 				if ( ParaLine.TrimSide.TS_RIGHT == side )
 					p--;
@@ -2697,6 +2700,16 @@ class ParaLine
 		
 		
 		return new DecoratedStr(sb.toString(), decors.toArray(new Decor[0]));
+	}
+	
+	/**
+	 * Returns content of ParaLine as a Decorated string object
+	 * 
+	 * @return decorated string equal to content of the ParaLine
+	 */
+	public DecoratedStr GetDecoratedStr() {
+		
+		return new DecoratedStr( buff.toString(), decors.toArray( new Decor[0] ) );
 	}
 	
 	

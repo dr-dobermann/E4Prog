@@ -33,6 +33,8 @@ public class TextFormatterTst {
 		
 		TestPara();
 		
+		HeaderTest();
+		
 	}
 
 	private static void TestRegExp() {
@@ -83,7 +85,7 @@ public class TextFormatterTst {
 		String p2[] = new String[] {
 				 "Today's morning started not as usual. The alarm sounded as always at 6am but I didn't get up and just asked my wife to open the door and walk our dog out.",
 				 "After her return we continued to sleep and got up late almost at 9am. I went to my work room and tried to make usual morning exercise but not succeeded with them.",
-				 "Every day I do 3 series of 30 push-ups. But today I could only make 20 in my first try. I thought it's possible not to do morning exercises today. I meditated my everyday's 10 minutes",
+				 "Every day I do 3 series of 30 push-ups. But today I could only make 20 in my first try. I thought it's possible not to do morning exercises today. I meditated my everyday's 10 minutes1",
 				 "and went to the shower. After the shower I felt better and did another 3 series of push-up of 20, 20 and 30 push-up accordingly.", 
 				};
 		String n2[] = new String[] {
@@ -107,7 +109,12 @@ public class TextFormatterTst {
 			Para P2 = new Para( null, 60, Para.PAlign.PA_FILL, 1, 5, new int[] {0,1}, new int[] {5, 0} );
 			P2.AddString( ParaLine.PrepareString( p2[0] ) );
 			P2.AddString( ParaLine.PrepareString( p2[1] ) );
-			P2.AddString( ParaLine.PrepareString( p2[2] ) );
+			
+			ParaLine pl = new ParaLine( P2, p2[2].length() );
+			pl.AddString( p2[2], new Decor[0] );
+			pl.InsertDecor(Decor.DeCmd.DCS_FNOTE, pl.GetLength() - 1, 1);
+			pl.InsertDecor(Decor.DeCmd.DCE_FNOTE, pl.GetLength(), null);
+			P2.AddString( pl.GetDecoratedStr() );
 			P2.AddFootnote( new DecoratedStr[] { ParaLine.PrepareString( n2[0] ) }, 1);
 			P2.AddString( ParaLine.PrepareString( p2[3] ) );
 			
@@ -178,6 +185,22 @@ public class TextFormatterTst {
 				System.out.println("Could not close the stream!" + e.getMessage());
 			}
 			
+		}
+	}
+
+	private static void HeaderTest() {
+		
+		try { 
+			Page pg = new Page(null);
+		
+			System.out.println( pg.getHeader().toString() );
+			
+			pg.SetPageNum(15);
+
+			System.out.println( pg.getHeader().toString() );
+		}
+		catch ( TFException e ) {
+			System.out.printf("Something went wrong!\n %s" , e.getMessage() );
 		}
 	}
 }
