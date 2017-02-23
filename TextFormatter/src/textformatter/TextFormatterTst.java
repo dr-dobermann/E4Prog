@@ -47,10 +47,6 @@ public class TextFormatterTst {
 		Matcher m = Pattern.compile("\\&(\\w?)([\\+|-]?)(\\{(\\w*)\\})?+").matcher(str);
 		while ( m.find() ) {
 		
-			//System.out.println(m.groupCount());
-			//System.out.println(m.start(0));
-			//System.out.println(m.end(0));
-			//System.out.println(m.toString());
 			System.out.println(str.substring(m.start(), m.end()) + " ");
 			
 			for ( int i = 1; i <= m.groupCount(); i++ )
@@ -83,24 +79,24 @@ public class TextFormatterTst {
 				 "Today's dairy.",
 			   };
 		String p2[] = new String[] {
-				 "Today's morning started not as usual. The alarm sounded as always at 6am but I didn't get up and just asked my wife to open the door and walk our dog out.",
-				 "After her return we continued to sleep and got up late almost at 9am. I went to my work room and tried to make usual morning exercise but not succeeded with them.",
-				 "Every day I do 3 series of 30 push-ups. But today I could only make 20 in my first try. I thought it's possible not to do morning exercises today. I meditated my everyday's 10 minutes1",
-				 "and went to the shower. After the shower I felt better and did another 3 series of push-up of 20, 20 and 30 push-up accordingly.", 
+				 "Today's morning started not as usual. The alarm sounded as always at 6am but I didn't get up and just asked my wife to open the door and let our dog to get out.",
+				 "After her return we continued to sleep and got up late almost at 9am. I went to my work room and tried to make my usual morning exercise but didn't succeeded with them.",
+				 "Every day I do 3 series of 30 push-ups. But today I could only make 20 in my first try. At first I thought it's possible to pass them for today. After this I had my everyday's 10 minutes meditatation1",
+				 "and went to the shower. After the shower I felt better and did another 3 series of push-up by 20, 20 and 30 push-up accordingly.", 
 				};
 		String n2[] = new String[] {
 				 "I use an Android App \"Calm\" for meditation"	
 				};
 		String p3[] = new String[] {
-				 "Then my wife made a breakfast and invited us to share it. After a breakfast I went on upper floor to yesterday's DOTa DAC games between Onyx vs Complexity and NP vs DC. I hoped Onyx", 
+				 "Then my wife made a breakfast and invited us to the table. After the breakfast I went on upper floor to watch yesterday's DOTa DAC games replys between Onyx vs Complexity and NP vs DC. I hoped Onyx", 
 				 "could win but they lost. DC should win and they did.", 
 				};
 		String p4[] = new String[] {
-				 "Today I bought an exercise band kit to make an extended work-out. Then I helped my wife to make the Mike's room.", 
+				 "After the replys watching I bought an exercise band kit to make an extended work-out. Then I helped my wife to make the Mike's room.", 
 					};
 		String p5[] = new String[] {
-				 "In afternoon we went out with Mike. I threw him his puller many times. After we notices he was starting weary, I went to the car and my wife made exercises with him.", 
-				 "Then we returned back. Mike had his lunch, so did we.",  
+				 "In afternoon we went out with Mike. I threw him his puller many times. After we noticed he was starting weary, I went to the car and my wife made exercises with him.", 
+				 "Little bit later we returned back. Mike had his lunch, so did we.",  
 				};
 		try {
 			Para P1 = new Para( null, 60, Para.PAlign.PA_RIGHT, 1, 0, new int[] {0,1}, new int[] {0, 0} );
