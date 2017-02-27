@@ -185,11 +185,12 @@ public class TextFormatter
 	public Page AddPage() 
 		throws TFException {
 		
-		Page newPage = new Page(this);
-		
-		GetLastPage().Close(newPage);
-		
+		Page oldPage = GetLastPage(),
+			 newPage = new Page(this);
+
 		pages.add(newPage);
+		
+		oldPage.Close(newPage);
 		
 		return newPage;
 	}
@@ -243,17 +244,19 @@ public class TextFormatter
 					if ( h <= 0 || w <= 0 )
 						throw new
 							TFException( getID(), 
-									     "[CheckAndExecCmd] Invalid page size [%d][%d]",
+									     "[CheckAndExecCmd] Invalid page size W x H [%d][%d]",
 									     w, h);
 					
-					if ( h < height ) {
+					width = w;
+					if ( h != height || 
+						 w > GetLastPage().getWidth() ) {
+						
 						height = h;
 						AddPage();
 					}
-					
-					width = w;
-					GetLastPage().SetWidth( w );
-					
+					else 
+						GetLastPage().SetWidth( w );
+
 					str = params[0];	
 				
 				break;
@@ -393,7 +396,7 @@ public class TextFormatter
 					throw new
 						TFException( getID(),
 								     "[CheckAndExecCmd] Invalid number of lines for feedlines!!!" );
-				GetLastPage().FeedLines(lines, true);
+				GetLastPage().FeedLines( lines, true );
 				
 				str = params[0];	
 
@@ -414,7 +417,7 @@ public class TextFormatter
 					throw new
 						TFException( getID(),
 								     "[CheckAndExecCmd] Invalid number of lines for feed!!!" );
-				GetLastPage().FeedLines(lines, false);
+				GetLastPage().FeedLines( lines, false );
 				
 				str = params[0];	
 
@@ -422,7 +425,7 @@ public class TextFormatter
 				
 			case "newpage" :
 				AddPage();
-				str = str.substring(m.end());	
+				str = str.substring( m.end() );	
 
 				break;
 				
@@ -514,7 +517,7 @@ public class TextFormatter
 								     pNum );
 				
 				lastPageNum = pNum;
-				GetLastPage().SetPageNum(pNum);
+				GetLastPage().SetPageNum( pNum );
 				
 				str = params[0];	
 
@@ -522,7 +525,8 @@ public class TextFormatter
 				
 			case "pb" :
 				GetLastPage().AddNewPara();
-				str = str.substring(m.end());	
+				
+				str = str.substring( m.end() );	
 
 				break;
 				
@@ -900,6 +904,8 @@ class Page
 	
 	private @Getter boolean isClosed = false;
 	
+	private List<Footnote> footnotes = new ArrayList<Footnote>();
+	
 	
 	public Page(TextFormatter tf) 
 		throws TFException {
@@ -936,15 +942,55 @@ class Page
 	
 	/**
 	 * Adds a new paragraph on the page. Before the addition it closes and 
-	 * formatting the previous one.
+	 * formats the previous one.
+	 * 
+	 * @return True if a new paragraph were added or 
+	 *         False if there is no free lines left on the page
 	 */
 	public void AddNewPara() 
 		throws TFException {
 		
-		if ( paragraphs.size() > 0 )
+		if ( isClosed )
+			throw new
+				TFException(getID(), "[AddNewPara] Page already closed!");
+		
+		if ( paragraphs.size() > 1 ) { // there is always header in place of the first paragraph
+			
+			RecalcLinesLeft();
 			GetLastPara().Close();
+			
+			if ( linesLeft <= 0 ) {
+				textFormatter.AddPage();
+				return;
+			}
+		}
 		
 		paragraphs.add(new Para(this, currWidth, align, interval, indent, spaces, margins));
+	}
+	
+	/**
+	 * Recalculates linesLeft value
+	 */
+	private void RecalcLinesLeft() 
+		throws TFException {
+		
+		boolean hasFootnote = false;
+		
+		linesLeft = height;
+		
+		for ( Para p : paragraphs ) {
+			if ( !p.isClosed() )
+				p.Format();
+			
+			linesLeft -= p.GetLinesCount( true, true );
+			
+			if ( p.GetFootnotesCount() > 0 )
+				hasFootnote = true;
+		}
+		
+		if ( hasFootnote )
+			linesLeft--;	
+		
 	}
 	
 	/**
@@ -972,6 +1018,10 @@ class Page
 	public void AddString(DecoratedStr str) 
 		throws TFException {
 		
+		if ( isClosed )
+			throw new
+				TFException(getID(), "[AddNewPara] Page already closed!");
+		
 		GetLastPara().AddString(str);
 	}
 
@@ -983,17 +1033,39 @@ class Page
 	public void Close( Page next )
 		throws TFException {
 
-		Format();
-		
-		isClosed = true;
-		
-		if ( linesLeft >= 0 )
+		if ( isClosed )
 			return;
+		
+		GetLastPara().Close();
+		
+		
+		if ( linesLeft >= 0 ) {
+			isClosed = true;
+			return;
+		}
+		
+		// while linesLeft is still below 0
+		// 1. Process all paragraphs with footnotes. 
+		//    Footnotes will be reformatted for the new page width, but 
+		//    new lines count will not take into account while moving.
+		//    Footnote's lines moves to the next page until the first one. 
+		//    If there are still no enough lines on the page, 
+		//    then footnote moves as a whole and takes the lines of paragraph 
+		//    it refers to with it. 
+		//    If there is already footnote moved from the previous page, 
+		//    it will not move anymore
+		//
+		// 2. Process all paragraphs while page height is reached.
+		//    If the part of paragraph is not enough for the compensation,
+		//    full paragraph will move to the next page.
+		//    Paragraph will be reformatted for the new page width after moving.
 		
 		while ( linesLeft < 0 ) {
 			
 			
 		}
+
+		isClosed = true;
 		
 	}
 	
@@ -1075,6 +1147,8 @@ class Page
 			headerHeight = 0;
 		
 		header.ResetHeader();
+		
+		RecalcLinesLeft();
 	}
 	
 	/**
@@ -1378,6 +1452,25 @@ class Para implements
 	}
 	
 	/**
+	 * Adds a new Paraline to the paragraph buffer
+	 * 
+	 * @param pl ParaLine to add
+	 * 
+	 * @throws TFException
+	 */
+	protected void AddString(ParaLine pl) 
+		throws TFException {
+		
+		if ( closed )
+			throw new 
+				TFException(getID(), "[AddString] Paragraph already closed!!!");
+		
+		isInvalid = true;
+
+		buff.add(pl);
+	}
+	
+	/**
 	 * Adds a footnote to the current string in the buffer
 	 * 
 	 * @param footnote 	   -- Footnote string array with decorations 
@@ -1390,7 +1483,7 @@ class Para implements
 
 		if ( closed )
 			throw new 
-				TFException(getID(), "[AddString] Paragraph already closed!!!");
+				TFException(getID(), "[AddFootnote] Paragraph already closed!!!");
 		
 		isInvalid = true;
 		
@@ -1404,25 +1497,61 @@ class Para implements
 		}
 
 	}
-	
-	
+
 	/**
-	 * Formats the paragraph according the settings
+	 * Adds new footnote to the paragraph
+	 * 
+	 * @param fn    -- footnote to add
+	 * @param line  -- line linked to the new footnote
 	 * 
 	 * @throws TFException
 	 */
-	public void Format() 
+	protected void AddFootnote( Footnote fn, int line ) 
+		throws TFException {
+
+		if ( closed )
+			throw new 
+				TFException(getID(), "[AddFootnote] Paragraph already closed!!!");
+
+		fn.SetPara(this);
+		fn.SetLine(line, true);
+		
+		footnotes.add(fn);
+	}
+	
+	/**
+	 * Formats the paragraph according the settings. 
+	 * If lines limit exceeded while paragraph formatting, the rest of the
+	 * buffer lines will send to the new created paragraph and it returns as a 
+	 * formatting result
+	 * 
+	 * @param linesLimit sets a limit of formatted lines for the paragraph
+	 * 
+	 * @throws TFException
+	 */
+	protected Para Format( int linesLimit ) 
 		throws TFException {
 		
+		
 		if ( !isInvalid )
-			return;
+			return null;
 		
 		lines.clear();
+
+		if ( footnotes.size() > 0 )
+			for ( Footnote fn : footnotes )
+				fn.Format( -1 );
 		
 		ParaLine line, newLine;
 		int maxLen, lineNo;
 		
 		for ( ParaLine pl : buff ) {
+			
+			lineNo = buff.indexOf(pl);
+
+			if ( linesLimit > 0 && lines.size() == linesLimit ) {
+				return MoveBufferToPara( lineNo, null );
+			}
 			
 			if ( pl.GetLength() == 0 ) {
 				lines.add(pl);
@@ -1431,7 +1560,6 @@ class Para implements
 			}
 			
 			line = pl.Copy();
-			lineNo = buff.indexOf(pl);
 			
 			while ( line.GetLength() > 0 ) {
 
@@ -1473,13 +1601,45 @@ class Para implements
 				}
 			}
 		}
-		
-		if ( footnotes.size() > 0 )
-			for ( Footnote fn : footnotes )
-				fn.Format();
-		
+				
 		isInvalid = false;
+		
+		return null;
 	}
+
+	
+	private Para MoveBufferToPara( int from, ParaLine pl ) 
+		throws TFException {
+	
+		Para newPara = new Para(page, 
+								width,
+								align,
+								interval,
+								indent,
+								spaces,
+								margins);
+			
+		for ( int l = from; l < buff.size(); l++ ) {
+			if ( l == from && pl != null )
+				newPara.AddString( pl );
+			else 
+				newPara.AddString( buff.get(l) );
+		}
+		
+		for ( Footnote fn : footnotes )
+			if ( fn.getLineNo()[1] >= from ) {
+				
+				newPara.AddFootnote( fn, fn.getLineNo()[1] - from );
+				footnotes.remove( fn );
+			}
+		
+		for ( int l = buff.size() - 1; l >= from; l-- )
+			buff.remove(l);
+		
+		return newPara;
+	}
+	
+	
 	
 	/**
 	 * Adds extra empty lines in the end of the paragraph
@@ -1720,7 +1880,9 @@ class Para implements
 	}
 	
 	/**
-	 * Returns number of lines in formatted or buffered zones
+	 * Returns number of lines in formatted or buffered zones.
+	 * 
+	 * Does not check if Para is formatted or not
 	 * 
 	 * @param fromFormatted -- if it's true, count of formatted lines returns, 
 	 *                         if it's false, count of buffered lines returns.
@@ -1871,10 +2033,15 @@ class Footnote extends Para
 	 * 					   false, then to the formatted lines
 	 */
 	public void SetLine( int newLine, boolean inBuffer ) {
+	
 		if ( inBuffer )
 			lineNo[1] = newLine;
 		else
 			lineNo[0] = newLine;
+	}
+	
+	public void SetPara( Para newPara ) {
+		para = newPara;
 	}
 	
 	@Override
@@ -1945,8 +2112,8 @@ class Header extends Para
 				super.AlignLine( pl, false );
 			}
 			else
-				// add double dashed string as the last line 
-				// of the header if the line has lover index
+				// add a double dashed string as the last line 
+				// of the header if space for it
 				if ( l == page.getHeaderHeight() - 1 && 
 				     page.getHeaderHeight() > 1 && 
 				     page.getHeaderLine() != page.getHeaderHeight() - 1 ) {

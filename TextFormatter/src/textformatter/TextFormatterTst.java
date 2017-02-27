@@ -81,18 +81,19 @@ public class TextFormatterTst {
 		String p2[] = new String[] {
 				 "Today's morning started not as usual. The alarm sounded as always at 6am but I didn't get up and just asked my wife to open the door and let our dog to get out.",
 				 "After her return we continued to sleep and got up late almost at 9am. I went to my work room and tried to make my usual morning exercise but didn't succeeded with them.",
-				 "Every day I do 3 series of 30 push-ups. But today I could only make 20 in my first try. At first I thought it's possible to pass them for today. After this I had my everyday's 10 minutes meditatation1",
-				 "and went to the shower. After the shower I felt better and did another 3 series of push-up by 20, 20 and 30 push-up accordingly.", 
+				 "Every day I do 3 series of 30 push-ups. But today I could only make 20 in my first try. At first I thought it's possible to miss them for today and then I had my everyday's 10 minutes meditatation1",
+				 "and went to the shower. After the shower I felt better and did another 3 series of push-ups by 20, 20 and 30 push-ups accordingly.",
+				 "I noticed that sometimes it seems impossible to make an exercise but after a short period of time it could be made easily.", 
 				};
 		String n2[] = new String[] {
 				 "I use an Android App \"Calm\" for meditation"	
 				};
 		String p3[] = new String[] {
-				 "Then my wife made a breakfast and invited us to the table. After the breakfast I went on upper floor to watch yesterday's DOTa DAC games replys between Onyx vs Complexity and NP vs DC. I hoped Onyx", 
+				 "Then my wife made a breakfast and invited us to the table. After the breakfast I went on upper floor to watch yesterday's DOTa DAC games replays between Onyx vs Complexity and NP vs DC. I hoped Onyx", 
 				 "could win but they lost. DC should win and they did.", 
 				};
 		String p4[] = new String[] {
-				 "After the replys watching I bought an exercise band kit to make an extended work-out. Then I helped my wife to make the Mike's room.", 
+				 "After the replays watching I bought an exercise band kit to make an extended work-out. Then I helped my wife to make the Mike's room.", 
 					};
 		String p5[] = new String[] {
 				 "In afternoon we went out with Mike. I threw him his puller many times. After we noticed he was starting weary, I went to the car and my wife made exercises with him.", 
@@ -113,6 +114,7 @@ public class TextFormatterTst {
 			P2.AddString( pl.GetDecoratedStr() );
 			P2.AddFootnote( new DecoratedStr[] { ParaLine.PrepareString( n2[0] ) }, 1);
 			P2.AddString( ParaLine.PrepareString( p2[3] ) );
+			P2.AddString( ParaLine.PrepareString( p2[4] ) );
 			
 			Para P3 = new Para( null, 50, Para.PAlign.PA_CENTER, 1, 5, new int[] {1,3}, new int[] {10, 10} );
 			P3.AddString( ParaLine.PrepareString( p3[0] ) );
