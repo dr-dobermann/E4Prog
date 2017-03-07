@@ -8,11 +8,8 @@
 ********************************************************/
 package textformatter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.*;
+import java.util.regex.*;
 
 import lombok.Getter;
 
@@ -804,3 +801,45 @@ class Header extends Para
 	}
 }
 //-----------------------------------------------------------------------------
+
+/**
+ * Represents a Frame functionality
+ * Frame is the view of the formatted paragraph lines on the page
+ * Frames are linked to the page and to the paragraph. 
+ * If the page link is null it's an orphaned frame and it should be
+ * adopted by the next page
+ * 
+ * @author dr.Dobermann
+ */
+class Frame {
+		
+	private @Getter Para para;
+	private @Getter Page page = null;
+	
+	private @Getter int sLine,
+	                    sPos,
+	                    eLine,
+	                    ePos;
+	
+	private List<FormattedLine> lines = new ArrayList<FormattedLine}>();
+	
+	private @Getter int width,
+	                    indent,
+	                    margins[],
+	                    spaces[],
+	                    feedLines;
+	
+	
+}
+//-----------------------------------------------------------------------------
+
+class FormattedLine {
+	StringBuilder s;
+	int line, pos;
+	
+	FormattedLine( StringBuilder s, int line, int pos ) {
+		this.s = s;
+		this.line = line;
+		this.pos = pos;
+	}
+}
