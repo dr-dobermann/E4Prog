@@ -280,9 +280,14 @@ class ParaLine
 	}
 	
 	/**
-	 * Drops tail of size length to the new ParaLine
+	 * Drops out tailing symbols into new ParaLine
+	 * These symbols are removed from the original ParaLine
+	 * 
 	 * @param length -- length of the tail to drop off
-	 * @return new ParaLine with tail of this one
+	 * 
+	 * @return New ParaLine consists the tail of the original ParaLine
+	 * 
+	 * @throws TFException
 	 */
 	public ParaLine DropTail(int length) 
 		throws TFException {
@@ -296,7 +301,7 @@ class ParaLine
 		// send the tail to a new ParaLine
 		pl.buff.append(buff.substring(buff.length() - length, buff.length()));
 		
-		// sends the related decors as well
+		// sends the related decoration commands as well
 		for ( Decor dec : decors )
 			if ( dec.getPos() >= buff.length() - length )
 				dec.SetLine(pl, dec.getPos() - length + 1);
@@ -304,7 +309,7 @@ class ParaLine
 		// delete the tail
 		buff.delete(buff.length() - length, buff.length());
 		
-		// delete the related decors as well
+		// delete the related decoration commands as well
 		for ( int d = 0; d < decors.size(); d++ )
 			if ( decors.get(d).getLine() != this )
 				decors.remove(d);

@@ -10,8 +10,7 @@ package textformatter;
 
 import java.util.*;
 import java.util.regex.*;
-
-import lombok.Getter;
+import lombok.*;
 
 /**
  * Provides single paragraph functionality
@@ -52,8 +51,8 @@ class Para implements
 	protected @Getter boolean isInvalid = true;
 	// buffer of unformatted ParaLines 
 	protected List<ParaLine> buff = new ArrayList<ParaLine>();
-	// list of formatted ParaLines
-	protected List<ParaLine> lines = new ArrayList<ParaLine>();
+	// list of Frames
+	protected List<Frame> frame = new ArrayList<Frame>();
 	
 	protected List<Footnote> footnotes = new ArrayList<Footnote>();
 	
@@ -267,39 +266,6 @@ class Para implements
 	}
 
 	
-	private Para MoveBufferToPara( int from, ParaLine pl ) 
-		throws TFException {
-	
-		Para newPara = new Para(page, 
-								width,
-								align,
-								interval,
-								indent,
-								spaces,
-								margins);
-			
-		for ( int l = from; l < buff.size(); l++ ) {
-			if ( l == from && pl != null )
-				newPara.AddString( pl );
-			else 
-				newPara.AddString( buff.get(l) );
-		}
-		
-		for ( Footnote fn : footnotes )
-			if ( fn.getLineNo()[1] >= from ) {
-				
-				newPara.AddFootnote( fn, fn.getLineNo()[1] - from );
-				footnotes.remove( fn );
-			}
-		
-		for ( int l = buff.size() - 1; l >= from; l-- )
-			buff.remove(l);
-		
-		return newPara;
-	}
-	
-	
-	
 	/**
 	 * Adds extra empty lines in the end of the paragraph
 	 * and closes it
@@ -329,145 +295,6 @@ class Para implements
 	}
 	
 	/**
-	 * Links all footnotes which were transferred from buffer line to the 
-	 * last formatted line 
-	 * 
-	 * @param buffLineNo -- number of buffer line processing
-	 */
-	private void LinkFootnotes( int buffLineNo ) {
-
-		Footnote[] fl = GetFNotesOnLine(buffLineNo, false);
-		ParaLine line = lines.get(lines.size() - 1);
-		
-		if ( fl.length > 0 ) {
-			
-			int pos = 0;
-			
-			Decor fNoteDecor = line.GetFirstDecorFrom(Decor.DeCmd.DCS_FNOTE, 0);
-			
-			while ( fNoteDecor != null ) {
-				
-				pos = fNoteDecor.getPos() + 1;
-				
-				for ( Footnote fn : fl )
-					if ( fn.getNoteID() == Integer.parseInt(fNoteDecor.getData().toString()) )
-						fn.SetLine(lines.size() - 1, false);
-				
-				fNoteDecor = line.GetFirstDecorFrom(Decor.DeCmd.DCS_FNOTE, pos);
-			}
-		}
-		
-	}
-		
-	/**
-	 * Aligns the line according to align settings and adds necessary margins
-	 * 
-	 * @param pl         -- line to align
-	 * @param lastLine   -- if it's the last line, it shouldn't be aligned in fill mode
-	 * 
-	 * @throws TFException
-	 */
-	protected void AlignLine( ParaLine pl, boolean lastLine ) 
-		throws TFException {
-		
-		if ( align == Para.PAlign.PA_AS_IS )
-			throw new
-				TFException( getID(), "It's forbidden to align lines with PA_AS_IS setting on!!!");
-		
-		// remove leading or trailing spaces for every line except for the first one
-		pl.Trim(ParaLine.TrimSide.TS_BOTH);
-
-		// adds left margins
-		if ( margins[0] > 0 )
-			pl.Pad( Para.PAlign.PA_LEFT, ' ', margins[0] + (lines.size() == 1 ? indent : 0) );
-		
-		int fillSpace = width - pl.GetLength() - margins[1];
-				
-		switch ( align ) {
-		
-			case PA_AS_IS :
-				break;
-				
-			case PA_LEFT :
-				pl.Pad(Para.PAlign.PA_RIGHT, ' ', fillSpace);
-				break;
-			
-			case PA_RIGHT :
-				pl.Pad(Para.PAlign.PA_LEFT, ' ', fillSpace);
-				break;
-			
-			case PA_CENTER :
-				pl.Pad(Para.PAlign.PA_CENTER, ' ', fillSpace);
-				break;
-			
-			case PA_FILL :
-				
-				if ( !lastLine && fillSpace > 0 ) { // do not align the last or full line
-				
-					List<Integer[]> words = new ArrayList<Integer[]>(); 
-					boolean firstWord = true;
-					// look for words
-					Matcher m = Pattern.compile("[\\Wp{Punct}\\p{Blank}]*[\\w'-]+[\\p{Punct}\\p{Blank}]*").matcher(pl.getBuff());
-				
-					while ( m.find() )
-					{
-						if ( firstWord ) // we don't add spaces before the first word
-							firstWord = false;
-						else
-							words.add(new Integer[] {m.start(), 0});
-					}
-					
-					int maxSpaces = 1;
-					int pos, idx;
-					int tries = 0;
-					while ( fillSpace > 0 ) {
-						
-						idx = (int)(Math.random() * (words.size() - 1));
-						pos = words.get(idx)[0];
-						
-						if ( words.get(idx)[1] < maxSpaces ) {
-							words.get(idx)[0] = pos + 1;
-							words.get(idx)[1] = maxSpaces;
-							// insert space before the word
-							pl.InsertChar( pos, ' ');
-							fillSpace--;
-							tries = 0;
-							
-							// shift all words after it for one space
-							for ( int i = idx + 1; i < words.size(); i++ )
-								words.get(i)[0] = words.get(i)[0] + 1;
-						}
-						else 
-							if ( tries++ > 2 ) {// if it not succeeded to find appropriate position three times 
-								maxSpaces++;    // increase number of allowed spaces before the word.
-								tries = 0;
-							}
-					}
-				}
-				break;
-		}
-		
-		// adds right margins
-		if ( margins[1] > 0 )
-			pl.Pad(Para.PAlign.PA_RIGHT, ' ', margins[1]);
-		
-		AddInterval();
-
-	}
-	
-	/**
-	 * Adds an interval after the formatted line
-	 * 
-	 * @throws TFException
-	 */
-	private void AddInterval() 
-		throws TFException {
-
-		for ( int i = 1; i < interval;  i++ ) 
-			lines.add(new ParaLine(this, width));
-	}
-	
-	/**
 	 * Looking for footnotes, linked to the line
 	 * 
 	 * @param line -- line number in buffered or formatted paragraph lines
@@ -477,7 +304,7 @@ class Para implements
 	 * 
 	 * @return an array of footnotes, linked to the line
 	 */
-	private Footnote[] GetFNotesOnLine( int line, boolean inFormatted )
+	Footnote[] GetFNotesOnLine( int line, boolean inFormatted )
 	{
 		if ( footnotes.size() == 0 )
 			return new Footnote[0];
@@ -490,6 +317,29 @@ class Para implements
 				fnl.add(f);
 		
 		return fnl.toArray(new Footnote[0]);
+	}
+	
+	public int GetBuffLinesCount() {
+		
+		return buff.size();
+	}
+	/**
+	 * Returns one buffer line
+	 * 
+	 * @param idx -- line index
+	 * 
+	 * @return buffer line on given index
+	 * 
+	 * @throws TFException
+	 */
+	public ParaLine GetBuffLine( int idx ) 
+		throws TFException {
+		
+		if ( idx < 0 || idx >= buff.size() )
+			throw new
+				TFException(getID(), "[GetBuffLine] Buffer line index [%d] is out of bounds!!! ", idx);
+		
+		return buff.get(idx);
 	}
 	
 	/**
@@ -802,6 +652,20 @@ class Header extends Para
 }
 //-----------------------------------------------------------------------------
 
+class FormattedLine {
+	
+	ParaLine s;  // ParaLine consisted the line symbols
+	int line,    // line number in the paragraph buffer
+	    pos;     // position of buffer line started the ParaLine
+	
+	FormattedLine( ParaLine s, int line, int pos ) {
+		this.s = s;
+		this.line = line;
+		this.pos = pos;
+	}
+}
+
+
 /**
  * Represents a Frame functionality
  * Frame is the view of the formatted paragraph lines on the page
@@ -811,35 +675,271 @@ class Header extends Para
  * 
  * @author dr.Dobermann
  */
-class Frame {
+ 
+class Frame 
+	implements TFExcDataLoad {
 		
 	private @Getter Para para;
-	private @Getter Page page = null;
+	private @Getter Page page;
 	
 	private @Getter int sLine,
 	                    sPos,
 	                    eLine,
 	                    ePos;
 	
-	private List<FormattedLine> lines = new ArrayList<FormattedLine}>();
+	private @Getter boolean isInvalid = true;
+	
+	private List<FormattedLine> lines = new ArrayList<FormattedLine>();
 	
 	private @Getter int width,
 	                    indent,
+	                    interval,
 	                    margins[],
 	                    spaces[],
 	                    feedLines;
+	private @Getter Para.PAlign align;
 	
+	public Frame( Para para, Page page,
+			      int sLine, int sPos, 
+			      int eLine, int ePos ) {
+		
+		this.para = para;
+		this.page = page;
+		this.sLine = sLine;
+		this.sPos = sPos;
+		this.eLine = eLine;
+		this.ePos = ePos;
+		
+		width = para.getWidth();
+		indent = para.getIndent();
+		interval = para.getInterval();
+		margins = para.getMargins();
+		spaces = para.getSpaces();
+		align = para.getAlign();
+		
+		feedLines = 0;
+	}
+	
+	protected void Format() 
+			throws TFException {
+			
+			
+			if ( !isInvalid )
+				return;
+			
+			lines.clear();
+
+			ParaLine line, newLine;
+			int maxLen, lineNo, pos;
+			
+			for ( lineNo = sLine; lineNo <= eLine; lineNo++ ) {
+
+				line = para.GetBuffLine( lineNo );
+				pos = 0;
+				
+				if ( lineNo == sLine && sPos > 0 ) {
+					line.CutHead( sPos + 1 );
+					pos = sPos;
+				}
+				
+				if ( lineNo == eLine && ePos < line.GetLength() - 1 )
+					line.DropTail( ePos + 1 );
+
+				if ( line.GetLength() == 0 ) {
+					lines.add( new FormattedLine( line, lineNo, pos ) );
+					continue;
+				}
+				
+				while ( line.GetLength() > 0 ) {
+
+					// add new line if lines list is empty or 
+					//              if last line in lines is full or
+					//              if the align is as_is
+					if ( lines.size() == 0 ||
+						 lines.get(lines.size() - 1).s.GetLength() == width ||
+						 align == Para.PAlign.PA_AS_IS
+						)
+						lines.add( new FormattedLine( new ParaLine( para, width), lineNo, pos ) );
+
+					newLine = lines.get(lines.size() - 1).s;
+
+					maxLen = width - newLine.GetLength() -  
+							 margins[1] - margins[0] -
+							 (lines.size() == 1 ? indent : 0);
+					
+					if ( maxLen >= line.GetLength() ) {
+						
+						// add rest of the line to a formatted lines string
+						// and get next line from paragraph buffer
+						newLine.JoinLine( line );
+						
+						// if it's the last line of the buffer then align it
+						if ( Para.PAlign.PA_AS_IS != align && 
+							 lineNo == eLine && eLine == para.GetBuffLinesCount() - 1 )
+							
+							AlignLine( newLine, 
+									   line.GetLength() == 0 && 
+									   lineNo == eLine && eLine == para.GetBuffLinesCount() - 1 );
+						continue;
+					}
+					else { 
+						
+						// add part of line from 0 up to last space in it
+						int len = line.getBuff().substring( 0, maxLen ).lastIndexOf(' ');
+						newLine.JoinLine( line.CutHead( len < 0 ? 0 : len ));
+						pos += len;
+						
+						LinkFootnotes( lineNo );
+						
+						if ( Para.PAlign.PA_AS_IS != align )
+							AlignLine( newLine,
+									   line.GetLength() == 0 && 
+									   lineNo == eLine && eLine == para.GetBuffLinesCount() - 1 ); // is it the last line of paragraph?
+						
+						// if there are still exist symbols in the buffer then add an empty line to the formatted lines list
+						if ( !( line.GetLength() == 0  && 
+								lineNo == eLine && eLine == para.GetBuffLinesCount() - 1 ) )
+							lines.add( new FormattedLine( new ParaLine( para, width ), lineNo, pos ) );
+					}
+				}
+			}
+					
+			isInvalid = false;			
+	}	
+
+	/**
+	 * Links all footnotes which were transferred from buffer line to the 
+	 * last formatted line 
+	 * 
+	 * @param buffLineNo -- number of buffer line processing
+	 */
+	private void LinkFootnotes( int buffLineNo ) {
+
+		Footnote[] fl = para.GetFNotesOnLine(buffLineNo, false);
+		ParaLine line = lines.get(lines.size() - 1).s;
+		
+		if ( fl.length > 0 ) {
+			
+			int pos = 0;
+			
+			Decor fNoteDecor = line.GetFirstDecorFrom(Decor.DeCmd.DCS_FNOTE, 0);
+			
+			while ( fNoteDecor != null ) {
+				
+				pos = fNoteDecor.getPos() + 1;
+				
+				for ( Footnote fn : fl )
+					if ( fn.getNoteID() == Integer.parseInt(fNoteDecor.getData().toString()) )
+						fn.SetLine(lines.size() - 1, false);
+				
+				fNoteDecor = line.GetFirstDecorFrom(Decor.DeCmd.DCS_FNOTE, pos);
+			}
+		}
+		
+	}	
+
+	/**
+	 * Aligns the line according to align settings and adds necessary margins
+	 * 
+	 * @param pl         -- line to align
+	 * @param lastLine   -- if it's the last line, it shouldn't be aligned in fill mode
+	 * 
+	 * @throws TFException
+	 */
+	protected void AlignLine( ParaLine pl, boolean lastLine ) 
+		throws TFException {
+		
+		if ( align == Para.PAlign.PA_AS_IS )
+			throw new
+				TFException( getID(), "It's forbidden to align lines with PA_AS_IS setting on!!!");
+		
+		// remove leading or trailing spaces for every line except for the first one
+		pl.Trim(ParaLine.TrimSide.TS_BOTH);
+	
+		// adds left margins
+		if ( margins[0] > 0 )
+			pl.Pad( Para.PAlign.PA_LEFT, ' ', margins[0] + (lines.size() == 1 ? indent : 0) );
+		
+		int fillSpace = width - pl.GetLength() - margins[1];
+				
+		switch ( align ) {
+		
+			case PA_AS_IS :
+				break;
+				
+			case PA_LEFT :
+				pl.Pad(Para.PAlign.PA_RIGHT, ' ', fillSpace);
+				break;
+			
+			case PA_RIGHT :
+				pl.Pad(Para.PAlign.PA_LEFT, ' ', fillSpace);
+				break;
+			
+			case PA_CENTER :
+				pl.Pad(Para.PAlign.PA_CENTER, ' ', fillSpace);
+				break;
+			
+			case PA_FILL :
+				
+				if ( !lastLine && fillSpace > 0 ) { // do not align the last or full line
+				
+					List<Integer[]> words = new ArrayList<Integer[]>(); 
+					boolean firstWord = true;
+					// look for words
+					Matcher m = Pattern.compile("[\\Wp{Punct}\\p{Blank}]*[\\w'-]+[\\p{Punct}\\p{Blank}]*").matcher(pl.getBuff());
+				
+					while ( m.find() )
+					{
+						if ( firstWord ) // we don't add spaces before the first word
+							firstWord = false;
+						else
+							words.add(new Integer[] {m.start(), 0});
+					}
+					
+					int maxSpaces = 1;
+					int pos, idx;
+					int tries = 0;
+					while ( fillSpace > 0 ) {
+						
+						idx = (int)(Math.random() * (words.size() - 1));
+						pos = words.get(idx)[0];
+						
+						if ( words.get(idx)[1] < maxSpaces ) {
+							words.get(idx)[0] = pos + 1;
+							words.get(idx)[1] = maxSpaces;
+							// insert space before the word
+							pl.InsertChar( pos, ' ');
+							fillSpace--;
+							tries = 0;
+							
+							// shift all words after it for one space
+							for ( int i = idx + 1; i < words.size(); i++ )
+								words.get(i)[0] = words.get(i)[0] + 1;
+						}
+						else 
+							if ( tries++ > 2 ) {// if it not succeeded to find appropriate position three times 
+								maxSpaces++;    // increase number of allowed spaces before the word.
+								tries = 0;
+							}
+					}
+				}
+				break;
+		}
+		
+		// adds right margins
+		if ( margins[1] > 0 )
+			pl.Pad(Para.PAlign.PA_RIGHT, ' ', margins[1]);
+	
+	}
+
+	/* (non-Javadoc)
+	 * @see textformatter.TFExcDataLoad#getID()
+	 */
+	@Override
+	public String getID() {
+		
+		return "FRAME: ";
+	}
 	
 }
 //-----------------------------------------------------------------------------
-
-class FormattedLine {
-	StringBuilder s;
-	int line, pos;
-	
-	FormattedLine( StringBuilder s, int line, int pos ) {
-		this.s = s;
-		this.line = line;
-		this.pos = pos;
-	}
-}
