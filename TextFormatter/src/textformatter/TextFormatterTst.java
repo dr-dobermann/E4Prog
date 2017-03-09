@@ -10,8 +10,6 @@ package textformatter;
 
 import java.util.regex.*;
 
-import textformatter.Para.PAlign;
-
 import java.io.*;
 
 /**
@@ -160,7 +158,7 @@ public class TextFormatterTst {
 		try {
 			sReader = new SentenceReader(reader);
 			
-			String str = sReader.GetRawSentence(true);
+			String str = sReader.GetRawSentence( true );
 			
 			
 			while ( str != null ) {

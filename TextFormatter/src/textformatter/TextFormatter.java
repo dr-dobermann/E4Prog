@@ -677,15 +677,15 @@ class SentenceReader
 	 * 
 	 * @throws TFException
 	 */
-	public String GetRawSentence(boolean getFullSentence) 
+	public String GetRawSentence( boolean getFullSentence ) 
 		throws TFException {
 
-		final Pattern cmdName = Pattern.compile("^\\?(\\w+)");
-		final Pattern sentenceEnd = Pattern.compile("\"\\?\"\\.|" +						   // "?".	
-				                                    "\\.\"\\)\\W|\\?\"\\)\\W|!\"\\)\\W|" + // ."), ?"), !") at the end of sentence 
-												    "\\.\\)\\W|\\?\\)\\W|!\\)\\W|" +       // .),  ?)   !)
-												    "(!+\\?+)+\\W|(\\?+!+)+\\W|" +         // !?, ?!
-													"\\.+\\W|\\?+\\W|!+\\W");              // ., ..., ?, !
+		final Pattern cmdName = Pattern.compile( "^\\?(\\w+)" );
+		final Pattern sentenceEnd = Pattern.compile( "\"\\?\"\\.(?!,)\\W*|" +					  // "?, ".  it excludes strings as ".,"	
+				                                     "\\.\"\\)\\W*|\\?\"\\)\\W*|!\"\\)\\W*|" +    // ."), ?"), !") at the end of sentence 
+												     "\\.\\)\\W*|\\?\\)\\W*|!\\)\\W*|" +          // .),  ?)   !)
+												     "(!+\\?+)+\\W*|(\\?+!+)+\\W*|" +             // !?,  ?!
+													 "\\.+(?!,)\\W*|\\?+\\W*|!+\\W*" );           // ., ..., ?, !
 		Matcher m;
 		
 		if ( seReason == SEReason.SER_STREAM_END )
@@ -701,12 +701,12 @@ class SentenceReader
 			return "";
 		}
 
-		StringBuilder sb = new StringBuilder("");
+		StringBuilder sb = new StringBuilder( "" );
 
 		// if there is no need to look for a formal end of the sentence but just for the end of the line
 		if ( !getFullSentence && uSen.length() > 0 ) {
-			sb.append(uSen);
-			uSen.delete(0, uSen.length());
+			sb.append( uSen );
+			uSen.delete( 0, uSen.length() );
 			
 			return sb.toString();
 		}
@@ -714,13 +714,15 @@ class SentenceReader
 		String str = ReadLine();
 		
 		while ( str != null ) {
+			
 			// if empty string is read and unfinished string is not empty,
 			// return unfinished sentence and fire emptyLine flag.
 			// if unfinished sentence is empty, return it
 			if ( str.trim().length() == 0 ) {
+				
 				if ( uSen.length() > 0 ) {
-					sb.append(uSen);
-					uSen.delete(0, uSen.length());
+					sb.append( uSen );
+					uSen.delete( 0, uSen.length() );
 					emptyLine = true;
 					seReason = SEReason.SER_EMPTY_LINE;
 				}
@@ -729,17 +731,18 @@ class SentenceReader
 			}
 			
 			if ( getFullSentence ) {
+				
 				// Check on sentence end or command start.
 				// If sentence end is occurred, return substring with it and
 				// previous buffer. Rest of the string save as unfinished sentence
-				m = sentenceEnd.matcher(str);
+				m = sentenceEnd.matcher( str );
 				if ( m.find() ) {
 					if ( uSen.length() > 0 ) {
-						sb.append(uSen);
-						uSen.delete(0, uSen.length());
+						sb.append( uSen );
+						uSen.delete( 0, uSen.length() );
 					}
-					sb.append(str.substring(0, m.end()));
-					uSen.append(str.substring(m.end()));
+					sb.append( str.substring( 0, m.end() ) );
+					uSen.append( str.substring( m.end() ) );
 					seReason = SEReason.SER_PUNCT;
 					
 					break;
@@ -897,6 +900,11 @@ class TFException extends Exception {
 
 class TFInvalidParameterCount extends Exception {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public TFInvalidParameterCount(String str) {
 		super(str);
 	}

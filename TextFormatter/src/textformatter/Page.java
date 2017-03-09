@@ -40,7 +40,7 @@ class Page
 	
 	private @Getter int headerHeight = 3;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
-	private @Getter int headerLine = 0;
+	private @Getter int headerLine = 1;
 	private @Getter Header header;
 	
 	private @Getter boolean isClosed = false;
@@ -123,7 +123,7 @@ class Page
 			if ( !p.isClosed() )
 				p.Format();
 			
-			linesLeft -= p.GetLinesCount( true, true );
+			linesLeft -= p.GetLinesCount( this, true, true );
 			
 			if ( p.GetFootnotesCount() > 0 )
 				hasFootnote = true;
@@ -223,7 +223,7 @@ class Page
 		
 		for ( Para p : paragraphs ) {
 			p.Format();
-			linesLeft -= p.GetLinesCount(true, true);
+			linesLeft -= p.GetLinesCount( this, true, true);
 			if ( p.GetFootnotesCount() > 0 )
 				hasFootnote = true;
 		}

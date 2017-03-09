@@ -289,7 +289,7 @@ class ParaLine
 	 * 
 	 * @throws TFException
 	 */
-	public ParaLine DropTail(int length) 
+	public ParaLine DropTail( int length ) 
 		throws TFException {
 		
 		if ( length > buff.length() )
