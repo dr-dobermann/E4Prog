@@ -294,7 +294,8 @@ class Para implements
 	 * 
 	 * @throws TFException
 	 */
-	public ParaLine[] GetLines( Page page, boolean spaced, boolean withIntervals, boolean withFNotes )
+	public ParaLine[] GetLines( Page page, boolean spaced[], boolean withIntervals, 
+			                    boolean withFeedLines, boolean withFNotes )
 		throws TFException 	{
 		
 		Format();
@@ -303,14 +304,14 @@ class Para implements
 		
 		for ( int f = 0; f < frames.size(); f++ )
 			if ( frames.get( f ).getPage() == page )
-				ll.addAll( Arrays.asList( frames.get( f ).GetLines( spaced, withIntervals ) ) );
+				ll.addAll( Arrays.asList( frames.get( f ).GetLines( spaced, withIntervals, withFeedLines ) ) );
 		
 		if ( withFNotes && footnotes.size() > 0 ) {
 			ll.add(new ParaLine( this, width ));
-			ll.get( ll.size() - 1 ).Pad( Para.PAlign.PA_LEFT, '-', width ); // TODO: change width for page.getWidth() after Para testing
+			ll.get( ll.size() - 1 ).Pad( Para.PAlign.PA_LEFT, '-', page.getWidth() );
 			
 			for ( Footnote f : footnotes )
-				ll.addAll( Arrays.asList( f.GetLines( page, spaced, withIntervals, false ) ) );
+				ll.addAll( Arrays.asList( f.GetLines( page, spaced, withIntervals, withFeedLines, false ) ) );
 		}
 		
 		return ll.toArray( new ParaLine[0] );
@@ -330,7 +331,7 @@ class Para implements
 	 * 
 	 * @throws TFException
 	 */
-	public int GetLinesCount( Page page, boolean fromFormatted, boolean withFootnotes ) 
+	public int GetLinesCount( Page page, boolean fromFormatted, boolean withFootnotes, boolean withIntervals ) 
 		throws TFException {
 		
 		
@@ -341,14 +342,14 @@ class Para implements
 			Format();
 		
 		for ( Footnote fNote : footnotes )
-			fnLines += fNote.GetLinesCount( page, fromFormatted, false );
+			fnLines += fNote.GetLinesCount( page, fromFormatted, false, withIntervals );
 
 		if ( !fromFormatted )
 			return buff.size() + fnLines;
 		
 		for ( Frame fr : frames )
 			if ( fr.getPage() == page )
-				frLines += fr.GetLinesCount();
+				frLines += fr.GetLinesCount( withIntervals );
 		
 		return frLines + fnLines;
 	}
@@ -388,8 +389,9 @@ class Para implements
 	public String toString() {
 		
 		ParaLine[] pll;
+		
 		try {
-			pll = GetLines( page, true, true, true );
+			pll = GetLines( page, new boolean[] {true, true}, true, true, true );
 		} 
 		catch ( TFException e ) {
 			throw new
@@ -410,6 +412,36 @@ class Para implements
 			
 	}
 		
+	/**
+	 * Fits paragraph to exact number of lines
+	 * 
+	 * @param lines    -- number of lines to fit into
+	 * @param noFnotes   -- if there is a footnote on the page
+	 *                      if the paragraph has a footnote, 
+	 *                      number of lines should be decremented by 1 
+	 *                      for a first footnote separator 
+	 * @param firstFrame -- if its the first frame on the page
+	 *                      then there is no leading space for it                  
+	 * 
+	 * @return actual lines number
+	 */
+	public int FitToLines( int lines, boolean noFNotes, boolean firstFrame )
+		throws TFException {
+		
+		if ( footnotes.size() == 0 ) {
+			
+			if ( lines > frames.get(0).GetLinesCount(true) +
+					     ( firstFrame ? 0 : spaces[0]) )
+			;
+		}
+		else {
+			
+		}
+		
+		return lines;
+	}
+	
+	
 	/*
 	 * @see textformatter.TFExcDataLoad#getID()
 	 */
@@ -652,6 +684,7 @@ class Frame
 	                    margins[],
 	                    spaces[],
 	                    feedLines = 0;
+	
 	private @Getter boolean feedWithIntervals = false;
 	
 	private @Getter Para.PAlign align;
@@ -976,12 +1009,12 @@ class Frame
 	 *        
 	 * @return an array of ParaLines
 	 */
-	public ParaLine[] GetLines( boolean spaced, boolean withIntervals ) {
+	public ParaLine[] GetLines( boolean spaced[], boolean withIntervals, boolean withFeedLines ) {
 		
 		List<ParaLine> rLines = new ArrayList<ParaLine>();
 
 		// add spaces before frame lines
-		if ( spaced )
+		if ( spaced[0] )
 			for ( int s = 0; s < spaces[0]; s++ )
 				rLines.add( new ParaLine( para, 1 ) );
 
@@ -993,12 +1026,12 @@ class Frame
 		}
 
 		// add spaces after frame lines
-		if ( spaced )
+		if ( spaced[1] )
 			for ( int s = 0; s < spaces[1]; s++ )
 				rLines.add( new ParaLine( para, 1 ) );
 		
 		// add feed lines after end of the frame
-		if ( spaced )
+		if ( withFeedLines )
 			for ( int s = 0; s < feedLines; s++ ) {
 				rLines.add( new ParaLine( para, 1 ) );
 				if ( withIntervals && interval > 1 )
@@ -1017,16 +1050,13 @@ class Frame
 	 * 
 	 * @throws TFException
 	 */
-	public int GetLinesCount() 
+	public int GetLinesCount( boolean withInterval ) 
 		throws TFException {
 		
 		Format();
 		
-		return lines.size() +
-			   spaces[0] +
-			   spaces[1] +
-			   indent * lines.size() +
-			   feedLines;
+		return lines.size() + 
+			   ( withInterval ? ( interval - 1 ) * lines.size() : 0 );
 	}
 	
 	/**
@@ -1073,7 +1103,7 @@ class Frame
 		
 		return new Frame( para, page, sL, sP, eL, eP );
 	}
-	
+		
 	/* (non-Javadoc)
 	 * @see textformatter.TFExcDataLoad#getID()
 	 */

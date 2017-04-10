@@ -36,7 +36,6 @@ class Page
 	private @Getter int indent = 3;
 	
 	private List<Para> paragraphs = new ArrayList<Para>();
-	private @Getter int linesLeft = height;
 	
 	private @Getter int headerHeight = 3;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
@@ -44,8 +43,11 @@ class Page
 	private @Getter Header header;
 	
 	private @Getter boolean isClosed = false;
+
+	private @Getter int linesLeft = height - headerHeight;
 	
 	private List<Footnote> footnotes = new ArrayList<Footnote>();
+	private List<Frame> frames = new ArrayList<>();
 	
 	
 	public Page(TextFormatter tf) 
@@ -69,7 +71,6 @@ class Page
 		}
 		
 		header = new Header( this );
-		paragraphs.add( header );
 
 		if ( headerHeight > 0 )
 			header.ResetHeader();
@@ -93,12 +94,14 @@ class Page
 		
 		if ( isClosed )
 			throw new
-				TFException(getID(), "[AddNewPara] Page already closed!");
+				TFException( getID(), "[AddNewPara] Page already closed!" );
 		
-		if ( paragraphs.size() > 1 ) { // there is always header in place of the first paragraph
+		if ( paragraphs.size() > 0 ) { 
 			
-			RecalcLinesLeft();
 			GetLastPara().Close();
+			
+			if ( GetLastPara().GetLinesCount( this, true, true, true ) > linesLeft )
+				linesLeft -= GetLastPara().FitToLines( linesLeft, footnotes.size() == 0, frames.size() == 0 );
 			
 			if ( linesLeft <= 0 ) {
 				textFormatter.AddPage();
@@ -107,31 +110,6 @@ class Page
 		}
 		
 		paragraphs.add(new Para(this, currWidth, align, interval, indent, spaces, margins));
-	}
-	
-	/**
-	 * Recalculates linesLeft value
-	 */
-	private void RecalcLinesLeft() 
-		throws TFException {
-		
-		boolean hasFootnote = false;
-		
-		linesLeft = height;
-		
-		for ( Para p : paragraphs ) {
-			if ( !p.isClosed() )
-				p.Format();
-			
-			linesLeft -= p.GetLinesCount( this, true, true );
-			
-			if ( p.GetFootnotesCount() > 0 )
-				hasFootnote = true;
-		}
-		
-		if ( hasFootnote )
-			linesLeft--;	
-		
 	}
 	
 	/**
@@ -211,28 +189,6 @@ class Page
 	}
 	
 	/**
-	 * Formats page and calculate its actual length
-	 * 
-	 * @throws TFException
-	 */
-	private void Format() 
-		throws TFException {
-		
-		boolean hasFootnote = false;
-		linesLeft = height;
-		
-		for ( Para p : paragraphs ) {
-			p.Format();
-			linesLeft -= p.GetLinesCount( this, true, true);
-			if ( p.GetFootnotesCount() > 0 )
-				hasFootnote = true;
-		}
-		
-		if ( hasFootnote )
-			linesLeft--;		
-	}
-	
-	/**
 	 * Sets new paragraph width. Closes the current paragraph and adds a new one
 	 * 
 	 * @param newWidth -- new paragraphs width for next new paragraphs
@@ -270,26 +226,20 @@ class Page
 		
 		if ( isClosed )
 			throw new
-			TFException(getID(), 
-					    "The page is closed already!!!");
+			TFException( getID(), 
+					     "The page is closed already!!!" );
 
-		if ( textFormatter.getHeaderHeight() > 1 ) {
-			
+		if ( headerHeight != textFormatter.getHeaderHeight() ) {
+
+			linesLeft += textFormatter.getHeaderHeight() - headerHeight;
+							
 			headerHeight = textFormatter.getHeaderHeight();
 			headerLine = textFormatter.getHeaderLine();
 			headerAlign = textFormatter.getHeaderAlign();
-			
-			if ( header == null ) {
-				header = new Header( this );
-				paragraphs.add(0, header);
-			}
+
+			header.ResetHeader();
 		}
-		else 
-			headerHeight = 0;
 		
-		header.ResetHeader();
-		
-		RecalcLinesLeft();
 	}
 	
 	/**
