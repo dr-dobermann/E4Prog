@@ -7,7 +7,7 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
-
+/*
 import lombok.*;
 
 import java.io.*;
@@ -15,13 +15,13 @@ import java.util.*;
 import java.util.regex.*;
 
 
-/**
+*//**
  * Formats given string list according to 
  * inner commands
  * 
  * @author dr.Dobermann
  *
- */
+ *//*
 public class TextFormatter 
 	implements TFExcDataLoad {
 	
@@ -62,32 +62,32 @@ public class TextFormatter
 	// Functionality
 	//-------------------------------------------------------------------------
 	
-	/** Returns latest footnote ID
+	*//** Returns latest footnote ID
 	 * 
 	 * @return latest footnote ID
-	 */
+	 *//*
 	public int GetLastNoteID() {
 		
 		return lastNoteID++;
 	}
 
-	/**
+	*//**
 	 * Returns the current page number
 	 * 
 	 * @return current page number
-	 */
+	 *//*
 	public int GetLastPageNum() {
 		
 		return lastPageNum++;
 	}
 	
-	/**
+	*//**
 	 * Loads document from an input stream
 	 * 
 	 * @param input  -- input stream
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void LoadDocument(BufferedReader input) 
 		throws TFException,
 			   TFInvalidParameterCount {
@@ -160,13 +160,13 @@ public class TextFormatter
 		}
 	}
 	
-	/**
+	*//**
 	 * Returns the last page of the document
 	 * 
 	 * @return Last page if there is any page
 	 * 
 	 * @throws TFException when the pages list is empty
-	 */
+	 *//*
 	private Page GetLastPage()
 		throws TFException {
 		
@@ -177,11 +177,11 @@ public class TextFormatter
 		return pages.get(pages.size() - 1);
 	}
 	
-	/**
+	*//**
 	 * Adds a new page into the document
 	 * 
 	 * @return newly added page
-	 */
+	 *//*
 	public Page AddPage() 
 		throws TFException {
 		
@@ -195,7 +195,7 @@ public class TextFormatter
 		return newPage;
 	}
 	
-	/**
+	*//**
 	 * Checks if there is controlling command in the begin of the line.
 	 * If the command exists, it cut and processed
 	 * 
@@ -204,7 +204,7 @@ public class TextFormatter
 	 * @return string without controlling command
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	private String CheckAndExecCmd(String str) 
 		throws TFException,
 			   TFInvalidParameterCount {
@@ -576,7 +576,7 @@ public class TextFormatter
 		return str;
 	}
 	
-	/**
+	*//**
 	 * Looking for command parameters in the string
 	 * 
 	 * @param str		-- checked string
@@ -589,7 +589,7 @@ public class TextFormatter
 	 *         without the command and it's parameters
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	private String[] GetCmdParams(String str, String searchStr, String cmd, int paraNum, boolean ignorePNum) 
 		throws TFException,
 	           TFInvalidParameterCount {
@@ -620,9 +620,9 @@ public class TextFormatter
 		return params.toArray(new String[0]);
 	}
 	
-	/* 
+	 
 	 * @see textformatter.TFExcDataLoad#getID()
-	 */
+	 
 	@Override
 	public String getID() {
 		
@@ -632,12 +632,12 @@ public class TextFormatter
 }
 //-----------------------------------------------------------------------------
 
-/**
+*//**
  * This class reads enclosed sentences from the input stream
  * 
  * @author dr.Dobermann
  *
- */
+ *//*
 class SentenceReader 
 	implements TFExcDataLoad {
 	
@@ -669,14 +669,14 @@ class SentenceReader
 	// Functionality
 	//-------------------------------------------------------------------------
 		
-	/**
+	*//**
 	 * Returns a raw sentence without controlling commands but with 
 	 * decoration commands in it
 	 * 
 	 * @return raw sentence with decoration commands unprocessed
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public String GetRawSentence( boolean getFullSentence ) 
 		throws TFException {
 
@@ -785,14 +785,14 @@ class SentenceReader
 		return sb.toString();
 	}
 	
-	/**
+	*//**
 	 * Returns only non-empty sentence or 
 	 * null in case of the end of the input stream is reached
 	 * 
 	 * @return non-empty sentence or null
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public String GetNonEmptySentence(boolean getFullSentence) 
 		throws TFException {
 		
@@ -807,12 +807,12 @@ class SentenceReader
 		
 	}
 	
-	/**
+	*//**
 	 * Reads new line from the input stream
 	 * 
 	 * @return String readed or null if there is an end of 
 	 *         input stream reached 
-	 */
+	 *//*
 	private String ReadLine() {
 		
 		String str;
@@ -828,13 +828,13 @@ class SentenceReader
 		return str;
 	}
 	
-	/**
+	*//**
 	 * Replaces all aliases to their original values
 	 * 
 	 * @param str  -- string to process 
 	 * 
 	 * @return string with replaced aliases
-	 */
+	 *//*
 	private String ReplaceAliases( String str ) {
 		
 		for ( String alias : aliases.keySet() )
@@ -844,13 +844,13 @@ class SentenceReader
 	}
 	
 
-	/**
+	*//**
 	 * Adds new alias into aliases table or clears all aliases
 	 * 
 	 * @param newName -- new alias for oldName. If newName is empty, 
 	 *                   then all aliases will be deleted 
 	 * @param oldName -- old name for the alias
-	 */
+	 *//*
 	public void SetAlias(String newName, String oldName) {
 		
 		if ( newName.length() == 0 ) {
@@ -862,9 +862,9 @@ class SentenceReader
 	}
 	
 
-	/* (non-Javadoc)
+	 (non-Javadoc)
 	 * @see textformatter.TFExcDataLoad#getID()
-	 */
+	 
 	@Override
 	public String getID() {
 		
@@ -876,16 +876,16 @@ class SentenceReader
 
 
 
-/**
+*//**
  * TextFormatter exception
  * @author dr.Dobermann
  *
- */
+ *//*
 class TFException extends Exception {
 	
-	/**
+	*//**
 	 * 
-	 */
+	 *//*
 	private static final long serialVersionUID = 1L;
 
 	public TFException(String id, String str) {
@@ -900,9 +900,9 @@ class TFException extends Exception {
 
 class TFInvalidParameterCount extends Exception {
 	
-	/**
+	*//**
 	 * 
-	 */
+	 *//*
 	private static final long serialVersionUID = 1L;
 
 	public TFInvalidParameterCount(String str) {
@@ -910,11 +910,11 @@ class TFInvalidParameterCount extends Exception {
 	}
 }
 
-/**
+*//**
  * Interface for object ID generation
  *  
  * @author dr.Dobermann
- */
+ *//*
 interface TFExcDataLoad {
 	public String getID(); 
-}
+}*/
