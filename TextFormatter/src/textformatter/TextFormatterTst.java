@@ -7,16 +7,23 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
+
+public class TextFormatterTst {
+	
+	public static void main ( String[] args ) {
+		
+		TextFormatter txtFmt = new TextFormatter();
+		
+		txtFmt.LoadDocument("C:\\wrk\\dev\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
+	}
+}
+
 /*
 import java.util.regex.*;
 
 import java.io.*;
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 19b719b5217147a4c7f15476d3373914e1b9cc43
-*//**
+/**
  * Test class for the project
  * 
  * @author dr.Dobermann

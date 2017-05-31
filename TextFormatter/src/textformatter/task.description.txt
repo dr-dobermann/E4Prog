@@ -20,92 +20,50 @@ Notes:
 ===================
 1. The task conditions were little bit changed from the original assignment 
 
-  1.1. Alignment sets as as_is, left, right, centered and proportional
+  1.1. Alignment sets as as_is, left, right, centered and fill(proportional)
   
-  1.2. Command ?center deleted as excess
+  1.2. Command ?center is deleted as excessive one
   
 2. Double empty lines in input stream closes current paragraph. More 
    single line in a row just ignored.
    
-3. Single empty line closes current sentence. If there is only one
-   command on the line, this line counts as an empty line.
+3. Single empty line closes current sentence. 
+
+4. Every command takes one line. Any information after the command
+   will be ignored.
+   The line which holds the command is not counted as an empty line.
    
-4. Footnote should be on the same page as the paragraph it's related to. 
+5. Footnote should be on the same page as the paragraph it's related to. 
    If there is no space for the whole footnote, part of it moves to the
-   next page. If there is still no enough space on the page, part of
-   the paragraph up to the link to a footnote also moves on the next page.
+   next page except one last line. 
+   If there is still no enough space on the page, part of
+   the paragraph up to the line with link to the footnote also moves to the next page.
    
-5. Page could not become wider than it was initially set. If a such situation
+6. Page could not become wider than it was initially set. If a such situation
    appears the new page starts.
 
-6. Footnotes takes initial width of the page (max width) and does not uses
+7. Footnotes takes initial width of the page (max width) and does not uses
    related paragraph width.
 
 
 Strategy:
 ===================
-1. Read every line from the input until the end. Reader should return 
-   one complete sentence or single line if current paragraph alignment is
-   set to PA_AS_IS. It could be interrupted for the footnote processing, 
-   but after that it should complete the sentence if it wasn't ended by
-   command of sentence end symbols.
-   All special symbols as \t \n \r should be removed or exchanged on spaces 
-   in the sentence (again, if the paragraph alignment is not set to PA_AS_IS.
-   All extra spaces should also be removed. After ":" should be double spaces.
-   
-  1.1. If line starts with the command sign "?", process the command. If
-       command closes the paragraph, close it and start a new one.
-       
-  1.2. All loaded lines clears from decoration commands, which linked to
-       the line as a list of DecorationCode and Line Position pairs.
-       
-  1.3. Add line to paragraph buffer. Buffer lines could have a different length.
-       After adding, the paragraph becomes invalid and should be formatted. 
-       Every line should be finished by double spaces.
-       
-  1.4. Formatting processes every buffer line and fill lines of the paragraph Frame
-       according to the paragraph settings (interval, margins, indent, align).
-       Frame represents a paragraph or its part on the page.
-       Every paragraph could have one or more Frames. First Frame takes place on the 
-       page the paragraph belongs to. Other Frames belongs to next pages. These
-       paragraphs named as orphaned and should be adopted by the next pages in first
-       place. Adopted Frames should be reformatted according to the page settings.
-       
-  1.5. If there is a footnote, read necessary amount of string to it and
-       continue with paragraph. In a place of a footnote command footnote mark should be
-       added to the line. Footnote mark should be enclosed in a pair of decoration commands.
-        
-  1.6. If the command closes the paragraph or there were two empty lines in series, 
-       the current paragraph should be closed and new one should be created after it.
-       Current paragraph will be formatted according to the paragraph's settings 
-       and related footnotes as the first paragraph's Frame.
-       Related footnotes also will be formatted.
-         
-  1.7. Frame of the formatted paragraph is added to the page. If there is no enough space on 
-       the page, a new frame is created and the rest of the paragraph and related footnotes
-       are placed on it.
-        
-  1.8. Every frame line saves the two pairs of a buffer line and position on it as its start and end.
-       These settings are used when the orphaned frames should be reformatted according to adopting page
-       settings.
-       
-2. Every page has three areas: the header, the body and the footer. Header and Footer
-   could not be larger than one third of the page each.  
-   If the Header is larger than one line, it could be separated out of the body 
-   by double line.
-   The Footer is always separated out from the body by a single line.
 
-3. Every page tracks a list of related paragraphs of body, a header paragraph and a 
-   footnote area paragraph. 
-   The real representation of the page is constructed by the list of Frames.
-   If a previous page has orphaned Frames (it could be body frames or footnote frames),
-   the current page should add them in the begin of the frames list and reformat them 
-   according to its own settings.
+1. Stream of input lines goes through few filters and as a result
+   we would have a list of formatted lines with linked to them decorations.
    
-4. Every paragraph consists of a buffer lines array, a footnotes list and frames list.
-   Every footnote linked to a buffer line and to a frame line.
-   Every frame is linked to the page it belongs to and bounded by two pairs of the buffer
-   lines and positions on them as the start and the end of the frame.
+   1.1. First filter cuts commands out and changes the state of processor 
+        according to them.
+   
+   1.2. The second filter transforms the raw input lines into ParaLines
+        by extracting decoration commands and anchoring them to the defined
+        positions.
+   
+   1.3. The third filter formats elements of the page from given ParaLines
+        based on the current processor state.
+   
+   1.4. The last filter creates pages from given pages elements and stores them 
+
 
 
 Command list:
@@ -114,10 +72,10 @@ Command list:
 name        | parameters (values) _ defaults _                         | closes the
 description |                                                          | paragraph
 -----------------------------------------------------------------------------------
-?size         width height _ 72 40 _                                     yes
+size         width height _ 72 40 _                                     yes
 Sets the page size
 
-?align        type (as_is, left, right, 
+align        type (as_is, left, right, 
                     center, fill)            _ left _                    yes
 Sets paragraphs align mode.
 as_is                 -- text presented as is 
@@ -127,50 +85,50 @@ fill                  -- text placed from left to right with no trail
                          or leading spaces. Extra spaces are added 
                          between the words where necessary
                          
-?par          indent spacesB spaces A _ 3 0 0 _                          yes
+par          indent spacesB spaces A _ 3 0 0 _                          yes
 Starts new paragraph with given indent and spaces intervals 
 before and after paragraphs
 
-?margin       left right                                                 yes
+margin       left right                                                 yes
 Sets the margins from left and rights for next paragraphs 
 
-?interval     lines _ 1 _
+interval     lines _ 1 _
 Sets interval between the paragraph lines                                yes
 
-?feedlines    lines_count                                                yes
+feedlines    lines_count                                                yes
 Feed lines_count empty lines with given interval. 
 Does not add empty lines on a new page start.
 
-?feed          lines _ 0 _                                               yes
+feed          lines _ 0 _                                               yes
 Feed exactly lines lines ignoring the interval settings.
 Does not add empty lines on a new page start.  
 
-?newpage                                                                 yes
+newpage                                                                 yes
 Starts new page
 
-?left          n                                                         yes
+left          n                                                         yes
 Checks if there are at least n lines of the page. 
 If there are less that n lines, then next page starts.
 If there are more that n lines left on the page, the command is ignored
 
-?header        height pn_line pn_position                                no
+header        height pn_line pn_position                                no
 Sets page header for next pages in height lines. 
 Page number printed in pn_line on pn_position (left, right, center).
 Command with 0 height disables the page headers for next pages
 
-?pnum          n                                                         no
+pnum          n                                                         no
 Sets current page number counter
 
-?pb                                                                      yes
+pb                                                                      yes
 Ends the current paragraph  
 
-?footnote      nstrings                                                  no
+footnote      nstrings                                                  no
 Adds a footnote to the page. Footnote is formed from the next nstrings. 
 A new footnote pops up the existed ones.
 If there is no place to put the whole footnote on the page, 
 the rest of it moves to the next page
 
-?alias         new_name old_name                                         no
+alias         new_name old_name                                         no
 Add alias for the symbol to mask it further
 
 Decoration commands:

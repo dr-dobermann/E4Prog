@@ -21,25 +21,26 @@ import java.nio.file.*;
 public class TextFormatter {
 
 	private @Getter int width = 72;
+	private @Getter int fnWidth = width;
 	private @Getter int height = 40;
+	private @Getter int linesLeft = height;
+	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
 	
 	private @Getter int interval = 1;
 	private @Getter int[] spaces = new int[] {0, 0};
 	private @Getter int[] margins = new int[] {0, 0};
 	private @Getter int indent = 3;
 	
-	private int lastNoteID = 1;
-	private int lastPageNum = 1;
+	private int NoteID = 1;
+	private int PageNum = 1;
 	
 	private int emptyLinesCount = 0;
 
 	private @Getter int headerHeight = 0;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
 	private @Getter int headerLine;
+	private List<String> header = null;
 	
-	private List<Page> pages = new ArrayList<Page>();
-	
-	public List<String> fnotes = new ArrayList<String>();
 	private int fnLines = -1;
 	
 	private String path = null;
@@ -50,22 +51,27 @@ public class TextFormatter {
 	
 	public void LoadDocument( String path ) {
 		
-		this.path = path;
-		
-		try {
-			Files.lines( Paths.get( path ) );
+
+		if ( !path.equals( this.path ) && 
+			 !path.isEmpty() ) {
 			
-		} catch ( IOException ex ) {
-			System.out.println( ex.getMessage() );
-		}
+			this.path = path;
+
+			try {
+			
+				Files.lines( Paths.get( this.path ) )
+					.forEach( line -> System.out.println( line ) );
+			} catch ( IOException ex ) {
+				ex.printStackTrace();
+			}
+		}		
 	}
+	
+
 }
 
 
-class SentenceReader {
-	
-	
-}
+
 /*
 import lombok.*;
 
