@@ -8,8 +8,7 @@
 ********************************************************/
 package textformatter;
 
-<<<<<<< HEAD
-=======
+
 import lombok.*;
 
 class Para {
@@ -23,7 +22,6 @@ class Para {
 	};
 	
 }
->>>>>>> 19b719b5217147a4c7f15476d3373914e1b9cc43
 
 /*
 import java.util.*;
