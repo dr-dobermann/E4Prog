@@ -7,22 +7,23 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
-
+/*
 import java.util.regex.*;
 
 import java.io.*;
 
-/**
+
+*//**
  * Test class for the project
  * 
  * @author dr.Dobermann
- */
+ *//*
 public class TextFormatterTst {
 
-	/**
+	*//**
 	 * Tests it all
 	 * @param args
-	 */
+	 *//*
 	public static void main(String[] args) {
 
 		// TestPrepareString();
@@ -200,3 +201,4 @@ public class TextFormatterTst {
 		}
 	}
 }
+*/

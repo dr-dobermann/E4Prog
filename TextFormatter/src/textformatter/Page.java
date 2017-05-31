@@ -7,18 +7,18 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
-
+/*
 import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Getter;
 
-/**
+*//**
  * Implements functionality of one page of the document
  * Consists one or zero header, few paragraphs and zero or few footnotes
  * 
  * @author dr.Dobermann
- */
+ *//*
 class Page 
 	implements TFExcDataLoad {
 	
@@ -82,13 +82,13 @@ class Page
 	// Functionality
 	//-------------------------------------------------------------------------
 	
-	/**
+	*//**
 	 * Adds a new paragraph on the page. Before the addition it closes and 
 	 * formats the previous one.
 	 * 
 	 * @return True if a new paragraph were added or 
 	 *         False if there is no free lines left on the page
-	 */
+	 *//*
 	public void AddNewPara() 
 		throws TFException {
 		
@@ -112,11 +112,11 @@ class Page
 		paragraphs.add(new Para(this, currWidth, align, interval, indent, spaces, margins));
 	}
 	
-	/**
+	*//**
 	 * Returns last paragraph on the page
 	 * @return last paragraph. If there is no any, exception fires
 	 * @throws TFException
-	 */
+	 *//*
 	private Para GetLastPara()
 		throws TFException {
 		
@@ -127,13 +127,13 @@ class Page
 		return paragraphs.get(paragraphs.size() - 1);
 	}
 	
-	/**
+	*//**
 	 * Adds a new string into the last paragraph
 	 * 
 	 * @param str  -- Decorated string to add
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void AddString(DecoratedStr str) 
 		throws TFException {
 		
@@ -144,11 +144,11 @@ class Page
 		GetLastPara().AddString(str);
 	}
 
-	/**
+	*//**
 	 * Close page and sent the rest of it to the next one
 	 * 
 	 * @param next -- Next page to consume the rest of the current page
-	 */
+	 *//*
 	public void Close( Page next )
 		throws TFException {
 
@@ -188,13 +188,13 @@ class Page
 		
 	}
 	
-	/**
+	*//**
 	 * Sets new paragraph width. Closes the current paragraph and adds a new one
 	 * 
 	 * @param newWidth -- new paragraphs width for next new paragraphs
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetWidth( int newWidth )
 		throws TFException {
 		
@@ -214,13 +214,13 @@ class Page
 		AddNewPara();
 	}
 	
-	/**
+	*//**
 	 * Sets or deletes the page header
 	 * 
 	 * @param height
 	 * @param line
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetHeader() 
 		throws TFException {
 		
@@ -242,14 +242,14 @@ class Page
 		
 	}
 	
-	/**
+	*//**
 	 * Feeds lines in the last paragraph
 	 * 
 	 * @param lines	       -- lines to feed
 	 * @param withInterval -- add interval after lines or not
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void FeedLines( int lines, boolean withInterval ) 
 		throws TFException {
 		
@@ -263,13 +263,13 @@ class Page
 		AddNewPara();
 	}
 	
-	/**
+	*//**
 	 * Sets new align setting for the next paragraphs
 	 * 
 	 * @param newAlign -- new align settings
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetAlign( Para.PAlign newAlign ) 
 		throws TFException {
 
@@ -283,13 +283,13 @@ class Page
 		AddNewPara();		
 	}
 	
-	/**
+	*//**
 	 * Sets new paragraph settings
 	 * 
 	 * @param indent   -- new first line indent settings
 	 * @param spaces   -- spaces before[0] and after[1] paragraph
 	 * 
-	 */
+	 *//*
 	public void SetParaSettings( int indent, int[] spaces ) 
 		throws TFException {
 		
@@ -329,13 +329,13 @@ class Page
 		AddNewPara();	 
 	}
 
-	/**
+	*//**
 	 * Sets margins settings for new paragraphs
 	 * 
 	 * @param  margins   -- new margins settings [0] - left, [1] - right
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetMargins( int[] margins ) 
 		throws TFException {
 		
@@ -357,12 +357,12 @@ class Page
 		AddNewPara();	 	
 	}
 	
-	/**
+	*//**
 	 * Sets new interval value for next paragraphs
 	 * 
 	 * @param newInt
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetInterval( int newInt ) 
 		throws TFException {
 		
@@ -382,13 +382,13 @@ class Page
 		AddNewPara();	 	
 	}
 
-	/**
+	*//**
 	 * Sets new page number
 	 * 
 	 * @param pNum -- new page number
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetPageNum( int pNum ) 
 		throws TFException {
 		
@@ -408,13 +408,13 @@ class Page
 		header.ResetHeader();
 	}
 	
-	/**
+	*//**
 	 * Adds a footnote to the last line of current paragraph
 	 * 
 	 * @param fnote -- an array of strings of footnote
 	 * @param id    -- id of a new footnote
 	 * @throws TFException
-	 */
+	 *//*
 	public void AddFootnote( String[] fnote, int id )
 		throws TFException {
 		
@@ -431,9 +431,9 @@ class Page
 		GetLastPara().AddFootnote(dfn, id);
 	}
 		
-	/* 
+	 
 	 * @see textformatter.TFExcDataLoad#getID()
-	 */
+	 
 	@Override
 	public String getID() {
 		
@@ -445,3 +445,4 @@ class Page
 
 
 
+*/

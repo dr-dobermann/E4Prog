@@ -8,16 +8,17 @@
 ********************************************************/
 package textformatter;
 
+/*
 import java.util.*;
 import java.util.regex.*;
 
 import lombok.Getter;
 
-/**
+*//**
  * Represents a pair of string and its decorations
  * 
  * @author dr.Dobermann
- */
+ *//*
 class DecoratedStr {
 	public String str;
 	public Decor[] dpl;
@@ -30,7 +31,7 @@ class DecoratedStr {
 //-----------------------------------------------------------------------------
 
 
-/**
+*//**
  * Consists of information about decoration command
  * Every decoration command linked to a line position.
  * It could start decoration or end decoration
@@ -42,7 +43,7 @@ class DecoratedStr {
  * as a string.
  * 
  * @author dr.Dobermann
- */
+ *//*
 class Decor 
 	implements TFExcDataLoad,
 			   Comparator<Decor> {
@@ -108,10 +109,10 @@ class Decor
 
 	}
 	
-	/**
+	*//**
 	 * Shifts decoration position on given shift
 	 * @param shift -- number of positions to shift. Might be negative
-	 */
+	 *//*
 	public void ShiftPos(int shift) throws TFException {
 		
 		int newPos = pos + shift;
@@ -123,12 +124,12 @@ class Decor
 		pos = newPos;
 	}
 
-	/**
+	*//**
 	 * Sets new decoration's owner and new position
 	 * @param newPL   -- new decor's owner
 	 * @param newPos  -- new position inside a new owner
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetLine(ParaLine newPL, int newPos) 
 		throws TFException {
 		if ( newPL == line )
@@ -143,7 +144,7 @@ class Decor
 		pos = newPos;
 	}
 
-	/**
+	*//**
 	 * Returns a tail of the DecoPair array which element's pos is bigger than fromPos.
 	 * Positions of the tail elements aligned by fromPos
 	 * 
@@ -153,7 +154,7 @@ class Decor
 	 * @return new array formed form an initial one (dpl)
 	 *  
 	 * @throws TFException
-	 */
+	 *//*
 	public static Decor[] DropTail ( Decor[] dpl, int fromPos ) {
 
 		List<Decor> res = new ArrayList<Decor>();
@@ -166,12 +167,12 @@ class Decor
 	
 	}
 	
-	/**
+	*//**
 	 * Gets first part of DecoPair array and return it
 	 * @param dpl     -- initial DecoPair array
 	 * @param maxIdx  -- maximum index to slice
 	 * @return new array of dpl elements from 0 to maxIdx
-	 */
+	 *//*
 	public static Decor[] GetMaxIdx ( Decor[] dpl, int maxIdx ) {
 		
 		List<Decor> res = new ArrayList<Decor>();
@@ -182,14 +183,14 @@ class Decor
 		return res.toArray(new Decor[0]);
 	}
 	
-	/**
+	*//**
 	 * Gets first pairs of DecoPair array, which pos is less or equal to maxPos
 	 *  
 	 * @param dpl    -- initial DecoPair array
 	 * @param maxPos -- maximum position to select resulting elements
 	 * 
 	 * @return array of DecoPair, which position is less or equal to maxPos 
-	 */
+	 *//*
 	public static Decor[] GetMaxPos ( Decor[] dpl, int maxPos ) {
 		
 		List<Decor> res = new ArrayList<Decor>();
@@ -201,9 +202,9 @@ class Decor
 		return res.toArray(new Decor[0]);
 	}
 	
-	/* 
+	 
 	 * @see textformatter.TFExcDataLoad#getID()
-	 */
+	 
 	@Override
 	public String getID() {
 		return String.format("DECOR[%d]: ", pos);
@@ -225,13 +226,13 @@ class Decor
 //-----------------------------------------------------------------------------
 
 	
-/**
+*//**
  * Describes one line of a paragraph 
  * Consist the line itself and all related decorations
  * 
  * @author dr.Dobermann
  *
- */
+ *//*
 class ParaLine 
 	implements TFExcDataLoad {
 	
@@ -261,11 +262,11 @@ class ParaLine
 		return decors.toArray(new Decor[0]);
 	}
 	
-	/**
+	*//**
 	 * Shift all decorations of the line started from 'after' position
 	 * @param after -- position after which the shift started
 	 * @param shift -- shift size
-	 */
+	 *//*
 	public void ShiftDecors(int after, int shift) 
 			throws TFException {
 		
@@ -279,7 +280,7 @@ class ParaLine
 				dec.ShiftPos(shift);
 	}
 	
-	/**
+	*//**
 	 * Drops out tailing symbols into new ParaLine
 	 * These symbols are removed from the original ParaLine
 	 * 
@@ -288,7 +289,7 @@ class ParaLine
 	 * @return New ParaLine consists the tail of the original ParaLine
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public ParaLine DropTail( int length ) 
 		throws TFException {
 		
@@ -317,7 +318,7 @@ class ParaLine
 		return pl;
 	}
 	
-	/**
+	*//**
 	 * Cuts the begin of the ParaLine and returns it as a new ParaLine
 	 * The rest of the initial are kept in old ParaLine
 	 * The relevant decorations are also going to the new ParaLine
@@ -327,7 +328,7 @@ class ParaLine
 	 * @return new ParaLine with length symbols
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public ParaLine CutHead( int length ) 
 		throws TFException {
 		
@@ -352,7 +353,7 @@ class ParaLine
 		return pl;
 	}
 
-	/**
+	*//**
 	 * Joins a new ParaLine.
 	 * If its length is longer than the free rest of the existed one,
 	 * only part of it will be added.
@@ -361,7 +362,7 @@ class ParaLine
 	 * @param pl -- new ParaLine to add
 	 * 
 	 * @return the rest of new ParaLine. it might have a zero length
-	 */
+	 *//*
 	public ParaLine JoinLine( ParaLine pl ) 
 		throws TFException {
 		
@@ -388,13 +389,13 @@ class ParaLine
 		return pl;
 	}
 	
-	/**
+	*//**
 	 * Creates a copy of ParaLine
 	 * 
 	 * @return Copy of existed ParaLine
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public ParaLine Copy() 
 		throws TFException {
 		
@@ -408,12 +409,12 @@ class ParaLine
 		return pl;		
 	}
 	
-	/**
+	*//**
 	 * Inserts one character ch into pos position
 	 * @param pos   -- position inside or at the end of buffer
 	 * @param ch	-- character to insert
 	 * @throws TFException
-	 */
+	 *//*
 	public void InsertChar(int pos, char ch) 
 		throws TFException {
 		
@@ -431,13 +432,13 @@ class ParaLine
 		}
 	}
 	
-	/**
+	*//**
 	 * Pads ParaLine with len number of char ch from align side
 	 * @param align  -- side to add. Could be Para.PAlign.PA_LEFT, Para.PAlign.PA_RIGHT
 	 *                  and Para.PAlign.PA_CENTER
 	 * @param ch     -- char to pad
 	 * @param len    -- number of chars
-	 */
+	 *//*
 	public void Pad(Para.PAlign align, char ch, int len) 
 		throws TFException {
 		
@@ -463,10 +464,10 @@ class ParaLine
 			}
 	}	
 	
-	/**
+	*//**
 	 * Trims extra spaces from begin, end or both sides of the ParaLine
 	 * @param side  -- Select side for trimming @see textformatter.ParaLine.TrimSide  
-	 */
+	 *//*
 	public void Trim( ParaLine.TrimSide side ) 
 		throws TFException {
 		
@@ -497,13 +498,13 @@ class ParaLine
 		
 	}
 	
-	/**
+	*//**
 	 * Append new string str at the end of the ParaLine and adds Decorations for its begin
 	 * @param str     -- string to append
 	 * @param decors  -- array of decorations to insert in the begin of the appended string
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void AddString( String str, Decor[] decors)
 		throws TFException {
 		
@@ -519,13 +520,13 @@ class ParaLine
 			InsertDecor(d.getCmd(), d.getPos() + pos, d.getData());
 	}
 	
-	/**
+	*//**
 	 * Adds a new decorated string to the ParaLine
 	 *  
 	 * @param dStr -- Decorated string to add
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void AddString(DecoratedStr dStr) 
 		throws TFException {
 		
@@ -542,14 +543,14 @@ class ParaLine
 			InsertDecor( d.getCmd(), d.getPos() + pos, d.getData());
 	}	
 	
-	/**
+	*//**
 	 * Adds new decoration on ParaLine if the position is out of 
 	 * ParaLine length, it added to the end of the ParaLine
 	 * 
 	 * @param dec    -- Decoration command to add
 	 * @param pos	 -- position of decoration command starts at
 	 * @throws TFException
-	 */
+	 *//*
 	public void InsertDecor( Decor.DeCmd dec, int pos, Object data)
 		throws TFException	{
 		
@@ -562,13 +563,13 @@ class ParaLine
 	}
 	
 	
-	/**
+	*//**
 	 * Returns an array of decorations linked to the position
 	 * 
 	 * @param pos  -- position to check at
 	 * 
 	 * @return array of linked to position decorations. Might be empty 
-	 */
+	 *//*
 	public Decor[] GetDecorAt( int pos ) {
 		
 		List<Decor> dl = new ArrayList<Decor>();
@@ -581,7 +582,7 @@ class ParaLine
 	}
 
 	
-	/**
+	*//**
 	 * Returns string enclosed by two decoration commands cmd1 and cmd2.
 	 * Search starts from position fromPos
 	 * 
@@ -593,7 +594,7 @@ class ParaLine
 	 *         search fails
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public String GetStringBetweenDecors ( Decor.DeCmd cmd1,
 			                               Decor.DeCmd cmd2,
 			                               int fromPos)
@@ -619,13 +620,13 @@ class ParaLine
 		return buff.substring(sPos, ePos);
 	}
 	
-	/**
+	*//**
 	 * Returns first decoration object in the ParaLine substring
 	 * @param dc    -- Decoration command to look for
 	 * @param from  -- substring starting point
 	 * 
 	 * @return First decoration object found in ParaLine substring
-	 */
+	 *//*
 	public Decor GetFirstDecorFrom(Decor.DeCmd dc, int from) {
 		
 		for ( Decor dec : decors )
@@ -635,10 +636,10 @@ class ParaLine
 		return null; 
 	}
 	
-	/**
+	*//**
 	 * Returns length of the buffer
 	 * @return buffer length
-	 */
+	 *//*
 	public int GetLength() {
 		
 		return buff.length();
@@ -652,7 +653,7 @@ class ParaLine
 	}
 	
 	
-	/**
+	*//**
 	 * Processes the input string with decoration command embedded 
 	 * into it and creates new DecoratedStr
 	 * 
@@ -661,7 +662,7 @@ class ParaLine
 	 * @return new DecoratedStr
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public static DecoratedStr PrepareString(String str)
 		throws TFException {
 		
@@ -744,23 +745,23 @@ class ParaLine
 		return new DecoratedStr(sb.toString(), decors.toArray(new Decor[0]));
 	}
 	
-	/**
+	*//**
 	 * Returns content of ParaLine as a Decorated string object
 	 * 
 	 * @return decorated string equal to content of the ParaLine
-	 */
+	 *//*
 	public DecoratedStr GetDecoratedStr() {
 		
 		return new DecoratedStr( buff.toString(), decors.toArray( new Decor[0] ) );
 	}
 	
 	
-	/* 
+	 
 	 * @see textformatter.TFExcDataLoad#getID()
-	 */
+	 
 	@Override
 	public String getID() {
 		return "PARALINE: ";
 	}
 }
-//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------*/

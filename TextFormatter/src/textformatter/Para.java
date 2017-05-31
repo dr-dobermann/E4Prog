@@ -8,18 +8,20 @@
 ********************************************************/
 package textformatter;
 
+
+/*
 import java.util.*;
 import java.util.regex.*;
 import lombok.*;
 
-/**
+*//**
  * Provides single paragraph functionality
  * Every single line might have position-linked decorations (such as bold,
  * italic and so on).
  *  
  * @author dr.Dobermann
  *
- */
+ *//*
 class Para implements
 	TFExcDataLoad {
 	
@@ -75,9 +77,9 @@ class Para implements
 		this.margins = margins;
 	}
 
-	/**
+	*//**
 	 * Closing the paragraph
-	 */
+	 *//*
 	public void Close() 
 		throws TFException {
 		
@@ -87,12 +89,12 @@ class Para implements
 		closed = true;
 	}
 	
-	/**
+	*//**
 	 * Adds string to a unformatted buffer and adds decorations to it
 	 * 
 	 * @param str 		-- string to add
 	 * @param decors	-- DecoPair placed on the string
-	 */
+	 *//*
 	public void AddString( DecoratedStr str ) 
 		throws TFException {
 		
@@ -111,14 +113,14 @@ class Para implements
 			pl.AddString( "  ", new Decor[0] );
 	}
 	
-	/**
+	*//**
 	 * Adds a footnote to the current string in the buffer
 	 * 
 	 * @param footnote 	   -- Footnote string array with decorations 
 	 * @param fNoteID	   -- footnote ID
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void AddFootnote( DecoratedStr[] footnote, int fNoteID ) 
 		throws TFException {
 
@@ -139,11 +141,11 @@ class Para implements
 
 	}
 
-	/**
+	*//**
 	 * Formats the paragraph according the settings. 
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	protected void Format() 
 		throws TFException {
 		
@@ -174,17 +176,17 @@ class Para implements
 		isInvalid = false;
 	}
 
-	/**
+	*//**
 	 * Returns paragraph's frames count
 	 * 
 	 * @return frames count
-	 */
+	 *//*
 	public int GetFramesCount() {
 		
 		return frames.size();
 	}
 	
-	/**
+	*//**
 	 * Returns single paragraph's frame
 	 * 
 	 * @param id -- frame id. First frame has 0 index
@@ -192,7 +194,7 @@ class Para implements
 	 * @return paragraph's frame
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public Frame GetFrame( int id ) 
 		throws TFException {
 		
@@ -203,13 +205,13 @@ class Para implements
 		return frames.get(id);		
 	}
 	
-	/**
+	*//**
 	 * Adds extra empty lines in the end of the paragraph
 	 * and closes it
 	 * 
 	 * @param lNum
 	 * @param withInterval
-	 */
+	 *//*
 	public void FeedLines( int lNum, boolean withInterval ) 
 		throws TFException {
 		
@@ -225,7 +227,7 @@ class Para implements
 		closed = true;
 	}
 	
-	/**
+	*//**
 	 * Looking for footnotes, linked to the line
 	 * 
 	 * @param line -- line number in buffered or formatted paragraph lines
@@ -234,7 +236,7 @@ class Para implements
 	 * 						 if false only buffer is checked
 	 * 
 	 * @return an array of footnotes, linked to the line
-	 */
+	 *//*
 	Footnote[] GetFNotesOnLine( int line, boolean inFormatted )
 	{
 		if ( footnotes.size() == 0 )
@@ -250,17 +252,17 @@ class Para implements
 		return fnl.toArray( new Footnote[0] );
 	}
 	
-	/**
+	*//**
 	 * Returns number of lines in the buffer
 	 * 
 	 * @return buffer lines number
-	 */
+	 *//*
 	public int GetBuffLinesCount() {
 		
 		return buff.size();
 	}
 	
-	/**
+	*//**
 	 * Returns one buffer line
 	 * 
 	 * @param idx -- line index
@@ -268,7 +270,7 @@ class Para implements
 	 * @return buffer line on given index
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public ParaLine GetBuffLine( int idx ) 
 		throws TFException {
 		
@@ -279,7 +281,7 @@ class Para implements
 		return buff.get( idx );
 	}
 	
-	/**
+	*//**
 	 * Returns an array of formatted lines
 	 * 
 	 * @param page -- Page frames belong to
@@ -293,7 +295,7 @@ class Para implements
 	 * @return an array of ParaLines. Spaces and intervals added as empty ParaLines
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public ParaLine[] GetLines( Page page, boolean spaced[], boolean withIntervals, 
 			                    boolean withFeedLines, boolean withFNotes )
 		throws TFException 	{
@@ -317,7 +319,7 @@ class Para implements
 		return ll.toArray( new ParaLine[0] );
 	}
 	
-	/**
+	*//**
 	 * Returns number of lines in formatted or buffered zones.
 	 * 
 	 * @param page          -- page frames belong to
@@ -330,7 +332,7 @@ class Para implements
 	 * @return number of paragraph lines
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public int GetLinesCount( Page page, boolean fromFormatted, boolean withFootnotes, boolean withIntervals ) 
 		throws TFException {
 		
@@ -354,17 +356,17 @@ class Para implements
 		return frLines + fnLines;
 	}
 
-	/**
+	*//**
 	 * Returns the number of footnotes linked to the paragraph
 	 * 
 	 * @return number of linked footnotes
-	 */
+	 *//*
 	public int GetFootnotesCount() {
 		
 		return footnotes.size(); 
 	}
 
-	/**
+	*//**
 	 * Return single footnote 
 	 * 
 	 * @param idx -- footnote index to get
@@ -372,7 +374,7 @@ class Para implements
 	 * @return footnote object
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public Footnote GetFootnote( int idx ) 
 		throws TFException {
 		
@@ -412,7 +414,7 @@ class Para implements
 			
 	}
 		
-	/**
+	*//**
 	 * Fits paragraph to exact number of lines
 	 * 
 	 * @param lines    -- number of lines to fit into
@@ -424,7 +426,7 @@ class Para implements
 	 *                      then there is no leading space for it                  
 	 * 
 	 * @return actual lines number
-	 */
+	 *//*
 	public int FitToLines( int lines, boolean noFNotes, boolean firstFrame )
 		throws TFException {
 		
@@ -442,9 +444,9 @@ class Para implements
 	}
 	
 	
-	/*
+	
 	 * @see textformatter.TFExcDataLoad#getID()
-	 */
+	 
 	@Override
 	public String getID() {
 		return "PARA: ";
@@ -453,12 +455,12 @@ class Para implements
 }
 //-----------------------------------------------------------------------------
 
-/**
+*//**
  * Implements functionality of a footnote
  * 
  * @author dr.Dobermann
  *
- */
+ *//*
 class Footnote extends Para 
                implements TFExcDataLoad {
 	
@@ -474,10 +476,10 @@ class Footnote extends Para
 									//   0 -- the position in formatted paragraph
 									//   1 -- the position in buffer
 	
-	/**
+	*//**
 	 * @param page
 	 * @param width
-	 */
+	 *//*
 	public Footnote( Page page, Para para, int[] lineNo, int id, int width ) 
 		throws TFException {
 		
@@ -499,7 +501,7 @@ class Footnote extends Para
 		buff.add(pl);
 	}
 	
-	/**
+	*//**
 	 * Sets a new line number for the footnote mark.
 	 * if inBuffer is true, then line number is linked to buffer line,
 	 * if not, then to the formatted lines
@@ -507,7 +509,7 @@ class Footnote extends Para
 	 * @param newLine   -- new line number
 	 * @param inBuffer  -- if true, new line sets for buffer, if
 	 * 					   false, then to the formatted lines
-	 */
+	 *//*
 	public void SetLine( Frame frame, int newLine, boolean inBuffer ) 
 		throws TFException {
 	
@@ -538,12 +540,12 @@ class Footnote extends Para
 }
 //-----------------------------------------------------------------------------
 
-/**
+*//**
  * Implements a header of a page
  * 
  * @author dr.Dobermann
  *
- */
+ *//*
 class Header extends Para
 			 implements TFExcDataLoad {
 
@@ -563,11 +565,11 @@ class Header extends Para
 	
 	// Functionality
 	//-------------------------------------------------------------------------
-	/**
+	*//**
 	 * Renews header representation
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void ResetHeader() 
 		throws TFException {
 
@@ -653,7 +655,7 @@ class FormattedLine {
 }
 
 
-/**
+*//**
  * Represents a Frame functionality
  * Frame is the view of the formatted paragraph lines on the page
  * Frames are linked to the page and to the paragraph. 
@@ -661,7 +663,7 @@ class FormattedLine {
  * adopted by the next page
  * 
  * @author dr.Dobermann
- */
+ *//*
  
 class Frame 
 	implements TFExcDataLoad {
@@ -710,20 +712,20 @@ class Frame
 		feedLines = 0;
 	}
 	
-	/**
+	*//**
 	 * Adds empty lines after the frame
 	 * 
 	 * @param lNum           -- number of added lines
 	 * @param withIntervals  -- if true, lines will be added with intervals between them
 	 *                          if false, lines will be added without intervals
-	 */
+	 *//*
 	public void Feed( int lNum, boolean withIntervals ) {
 		
 		feedLines = lNum;
 		feedWithIntervals = withIntervals;
 	}
 	
-	/**
+	*//**
 	 * Sets new bounds for the frame
 	 * Bounds related to the paragraph buffer
 	 * 
@@ -733,7 +735,7 @@ class Frame
 	 * @param ePos  -- frame ending position in end buffer line
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void SetBounds( int sLine, int sPos,
 			               int eLine, int ePos ) 
 		throws TFException {
@@ -759,11 +761,11 @@ class Frame
 		this.ePos = ePos;
 	}
 	
-	/**
+	*//**
 	 * Sets page the frame linked to
 	 * 
 	 * @param pg -- page object to link the frame
-	 */
+	 *//*
 	public void SetPage( Page pg ) {
 		
 		if ( pg == this.page || pg == null )
@@ -781,11 +783,11 @@ class Frame
 		align 		= page.getAlign();
 	}
 	
-	/**
+	*//**
 	 * Formatting frame
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public void Format() 
 			throws TFException {
 			
@@ -875,12 +877,12 @@ class Frame
 			isInvalid = false;			
 	}	
 
-	/**
+	*//**
 	 * Links all footnotes which were transferred from buffer line to the 
 	 * last formatted line 
 	 * 
 	 * @param buffLineNo -- number of buffer line processing
-	 */
+	 *//*
 	private void LinkFootnotes( int buffLineNo ) 
 		throws TFException {
 
@@ -907,14 +909,14 @@ class Frame
 		
 	}	
 
-	/**
+	*//**
 	 * Aligns the line according to align settings and adds necessary margins
 	 * 
 	 * @param pl         -- line to align
 	 * @param lastLine   -- if it's the last line, it shouldn't be aligned in fill mode
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	protected void AlignLine( ParaLine pl, boolean lastLine ) 
 		throws TFException {
 		
@@ -1001,14 +1003,14 @@ class Frame
 	
 	}
 
-	/**
+	*//**
 	 * Returns an array of ParaLines represented the frame
 	 * 
 	 * @param withIntervals -- if true, empty interval lines will insert 
 	 *        between returned lines
 	 *        
 	 * @return an array of ParaLines
-	 */
+	 *//*
 	public ParaLine[] GetLines( boolean spaced[], boolean withIntervals, boolean withFeedLines ) {
 		
 		List<ParaLine> rLines = new ArrayList<ParaLine>();
@@ -1042,14 +1044,14 @@ class Frame
 		return rLines.toArray( new ParaLine[0] );
 	}
 
-	/**
+	*//**
 	 * Return number of lines of formatted frame with
 	 * all interval, spaces and feedLines
 	 * 
 	 * @return number of formatted lines 
 	 * 
 	 * @throws TFException
-	 */
+	 *//*
 	public int GetLinesCount( boolean withInterval ) 
 		throws TFException {
 		
@@ -1059,26 +1061,26 @@ class Frame
 			   ( withInterval ? ( interval - 1 ) * lines.size() : 0 );
 	}
 	
-	/**
+	*//**
 	 * Sets new spaces values
 	 * 
 	 * @param newSpaces array of spaces values.
 	 *        first element sets spaces before the frame
 	 *        second element sets spaces after the frame
-	 */
+	 *//*
 	public void SetSpaces( int[] newSpaces ) {
 		
 		spaces[0] = newSpaces[0];
 		spaces[1] = newSpaces[1];
 	}
 	
-	/**
+	*//**
 	 * Drops a number of tailing lines to the new Frame and return it
 	 * 
 	 * @param lines -- number of lines to drop out
 	 * 
 	 * @return New Frame which consists of dropped lines
-	 */
+	 *//*
 	public Frame DropTail( int nLines ) 
 		throws TFException {
 		
@@ -1104,9 +1106,9 @@ class Frame
 		return new Frame( para, page, sL, sP, eL, eP );
 	}
 		
-	/* (non-Javadoc)
+	 (non-Javadoc)
 	 * @see textformatter.TFExcDataLoad#getID()
-	 */
+	 
 	@Override
 	public String getID() {
 		
@@ -1115,3 +1117,4 @@ class Frame
 	
 }
 //-----------------------------------------------------------------------------
+*/
