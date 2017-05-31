@@ -7,7 +7,10 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
+<<<<<<< HEAD
 
+=======
+>>>>>>> 19b719b5217147a4c7f15476d3373914e1b9cc43
 /*
 import java.util.*;
 import java.util.regex.*;

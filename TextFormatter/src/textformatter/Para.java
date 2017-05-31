@@ -8,6 +8,22 @@
 ********************************************************/
 package textformatter;
 
+<<<<<<< HEAD
+=======
+import lombok.*;
+
+class Para {
+
+	enum PAlign { 
+		PA_AS_IS,
+		PA_LEFT,
+		PA_RIGHT,
+		PA_CENTER,
+		PA_FILL
+	};
+	
+}
+>>>>>>> 19b719b5217147a4c7f15476d3373914e1b9cc43
 
 /*
 import java.util.*;
