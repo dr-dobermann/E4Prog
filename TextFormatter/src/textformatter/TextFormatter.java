@@ -7,6 +7,65 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
+
+
+
+import lombok.*;
+
+import java.util.*;
+import java.io.IOException;
+import java.nio.file.*;
+
+
+
+public class TextFormatter {
+
+	private @Getter int width = 72;
+	private @Getter int height = 40;
+	
+	private @Getter int interval = 1;
+	private @Getter int[] spaces = new int[] {0, 0};
+	private @Getter int[] margins = new int[] {0, 0};
+	private @Getter int indent = 3;
+	
+	private int lastNoteID = 1;
+	private int lastPageNum = 1;
+	
+	private int emptyLinesCount = 0;
+
+	private @Getter int headerHeight = 0;
+	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
+	private @Getter int headerLine;
+	
+	private List<Page> pages = new ArrayList<Page>();
+	
+	public List<String> fnotes = new ArrayList<String>();
+	private int fnLines = -1;
+	
+	private String path = null;
+	
+	TextFormatter() {
+		
+	}
+	
+	public void LoadDocument( String path ) {
+		
+		this.path = path;
+		
+		try {
+			Files.lines( Paths.get( path ) );
+			
+		} catch ( IOException ex ) {
+			System.out.println( ex.getMessage() );
+		}
+	}
+}
+
+
+class SentenceReader {
+	
+	
+}
 /*
 import lombok.*;
 

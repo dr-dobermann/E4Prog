@@ -7,6 +7,21 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
+
+import lombok.*;
+
+class Para {
+
+	enum PAlign { 
+		PA_AS_IS,
+		PA_LEFT,
+		PA_RIGHT,
+		PA_CENTER,
+		PA_FILL
+	};
+	
+}
+
 /*
 import java.util.*;
 import java.util.regex.*;

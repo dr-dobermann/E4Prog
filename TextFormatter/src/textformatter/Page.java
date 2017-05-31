@@ -7,6 +7,13 @@
 * Author: dr.Dobermann (c) 2017
 ********************************************************/
 package textformatter;
+
+import lombok.*;
+
+class Page {
+	
+}
+
 /*
 import java.util.ArrayList;
 import java.util.List;
