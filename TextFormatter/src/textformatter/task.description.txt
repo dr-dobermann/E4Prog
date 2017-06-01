@@ -49,20 +49,17 @@ Notes:
 Strategy:
 ===================
 
-1. Stream of input lines goes through few filters and as a result
+1. Stream of input lines goes through few mappers and as a result
    we would have a list of formatted lines with linked to them decorations.
    
-   1.1. First filter cuts commands out and changes the state of processor 
-        according to them.
-   
-   1.2. The second filter transforms the raw input lines into ParaLines
+   1.1. First map converts commands out and transforms the raw input lines into ParaLines
         by extracting decoration commands and anchoring them to the defined
         positions.
    
-   1.3. The third filter formats elements of the page from given ParaLines
+   1.2. The second map formats elements of the page from given ParaLines
         based on the current processor state.
    
-   1.4. The last filter creates pages from given pages elements and stores them 
+   1.3. The last map creates pages from given pages elements and stores them 
 
 
 
