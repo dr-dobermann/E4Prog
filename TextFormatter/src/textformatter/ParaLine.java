@@ -160,8 +160,8 @@ class Decor
 	public static List<Decor> GetHead ( List<Decor> dpl, int toPos ) {
 		
 		return dpl.stream()
-			.filter( d -> d.pos <= toPos )
-			.collect( Collectors.toList() );
+				.filter( d -> d.pos <= toPos )
+				.collect( Collectors.toList() );
 	}	
 	 
 	@Override
@@ -206,6 +206,23 @@ class ParaLine {
 		this.width = width; 
 		
 		buff = new StringBuilder( this.width );
+	}
+	
+	/**
+	 * Sets new content of the ParaLine
+	 * Erases old content and deletes old decorations
+	 * 
+	 * @param sb -- StringBuilder with a new content
+	 * 
+	 */
+	public void SetBuffer( StringBuilder sb ) {
+		
+		if ( buff.length() > 0 )
+			buff.delete( 0, buff.length() );
+		
+		decors.clear();
+		
+		buff.append( sb );
 	}
 	
 	/**
@@ -289,8 +306,8 @@ class ParaLine {
 				decors.remove( d );
 			});
 		
-		ShiftDecors(0, -length);
-		buff.delete(0, length);
+		ShiftDecors( 0, -length );
+		buff.delete( 0, length );
 		
 		return pl;
 	}
@@ -309,22 +326,22 @@ class ParaLine {
 		                                       // by using massive operations instead of single ones
 		
 		if ( pl.GetLength() == 0 )
-			return new ParaLine(0);
+			return new ParaLine( 0 );
 		
 		int offset = buff.length(),
 			len = pl.GetLength() > width - buff.length() ? width - buff.length() : pl.GetLength();
 		
 		for ( int p = 0; p < len; p++ ) {
-			buff.append( pl.buff.charAt(p) );
-			for ( Decor dec : pl.GetDecorAt(p) )
-				InsertDecor(dec.getCmd(), dec.getPos() + offset, dec.getData());
+			buff.append( pl.buff.charAt( p ) );
+			for ( Decor dec : pl.GetDecorsAt( p ) )
+				InsertDecor( dec.getCmd(), dec.getPos() + offset, dec.getData() );
 		}
 		
 		if ( len < pl.GetLength() )
-			pl.CutHead(len);
+			pl.CutHead( len );
 		else
 			{
-				pl.buff.delete(0, len);
+				pl.buff.delete( 0, len );
 				pl.decors.clear();
 			}
 		
@@ -340,9 +357,9 @@ class ParaLine {
 	 */
 	public ParaLine Copy() {
 		
-		ParaLine pl = new ParaLine(width);
+		ParaLine pl = new ParaLine( width );
 		
-		pl.buff.append(buff);
+		pl.buff.append( buff );
 		
 		for ( Decor dec : decors )
 			pl.InsertDecor( dec.getCmd(), dec.getPos(), dec.getData() );
@@ -356,7 +373,7 @@ class ParaLine {
 	 * @param ch	-- character to insert
 	 * @throws TFException
 	 */
-	public void InsertChar(int pos, char ch) {
+	public void InsertChar( int pos, char ch ) {
 		
 		if ( pos < 0 ||
 			 pos > buff.length() ||
@@ -365,10 +382,10 @@ class ParaLine {
 			return;
 		}
 		if ( pos == buff.length() )
-			buff.append(ch);
+			buff.append( ch );
 		else {
-			buff.insert(pos, ch);
-			ShiftDecors(pos, 1);
+			buff.insert( pos, ch );
+			ShiftDecors( pos, 1 );
 		}
 	}
 	
@@ -379,21 +396,21 @@ class ParaLine {
 	 * @param ch     -- char to pad
 	 * @param len    -- number of chars
 	 */
-	public void Pad(Para.PAlign align, char ch, int len) {
+	public void Pad( Para.PAlign align, char ch, int len ) {
 		
-		if ( align == Para.PAlign.PA_CENTER) {
-			Pad(Para.PAlign.PA_LEFT, ch, len/2);
-			Pad(Para.PAlign.PA_RIGHT, ch, len - len/2);
+		if ( align == Para.PAlign.PA_CENTER ) {
+			Pad( Para.PAlign.PA_LEFT, ch, len/2 );
+			Pad( Para.PAlign.PA_RIGHT, ch, len - len/2 );
 		}
 		
 		for ( int i = 0; i < len; i++ )
 			switch ( align ) {
 				case PA_LEFT :
-					InsertChar(0, ch);
+					InsertChar( 0, ch );
 					break;
 					
 				case PA_RIGHT :
-					InsertChar(buff.length(), ch);
+					InsertChar( buff.length(), ch );
 					break;
 					
 				case PA_CENTER :
@@ -410,8 +427,8 @@ class ParaLine {
 	public void Trim( ParaLine.TrimSide side ) {
 		
 		if ( ParaLine.TrimSide.TS_BOTH == side ) {
-			Trim(ParaLine.TrimSide.TS_LEFT);
-			Trim(ParaLine.TrimSide.TS_RIGHT);
+			Trim( ParaLine.TrimSide.TS_LEFT );
+			Trim( ParaLine.TrimSide.TS_RIGHT );
 			
 			return;
 		}
@@ -421,10 +438,10 @@ class ParaLine {
 		for ( int p = 0; p < buff.length(); p ++ ) {
 			pos = ParaLine.TrimSide.TS_RIGHT == side ? buff.length() - p - 1 : p;
 			
-			if ( buff.charAt(pos) == ' ' ) {
+			if ( buff.charAt( pos ) == ' ' ) {
 				
-				ShiftDecors(pos, -1);
-				buff.deleteCharAt(pos);
+				ShiftDecors( pos, -1 );
+				buff.deleteCharAt( pos );
 			
 				if ( ParaLine.TrimSide.TS_RIGHT == side )
 					p--;
@@ -440,8 +457,6 @@ class ParaLine {
 	 * Append new string str at the end of the ParaLine and adds Decorations for its begin
 	 * @param str     -- string to append
 	 * @param decors  -- array of decorations to insert in the begin of the appended string
-	 * 
-	 * @throws TFException
 	 */
 	public void AddString( String str, Decor[] decors) {
 		
@@ -453,34 +468,12 @@ class ParaLine {
 		
 		int pos = buff.length();
 		
-		buff.append(str);
+		buff.append( str );
 		
 		for ( Decor d : decors ) 
-			InsertDecor(d.getCmd(), d.getPos() + pos, d.getData());
+			InsertDecor( d.getCmd(), d.getPos() + pos, d.getData() );
 	}
 	
-	/**
-	 * Adds a new decorated string to the ParaLine
-	 *  
-	 * @param dStr -- Decorated string to add
-	 * 
-	 * @throws TFException
-	 */
-	public void AddString(DecoratedStr dStr) 
-		throws TFException {
-		
-		if ( dStr.str.length() > width - buff.length() )
-			throw new
-				TFException( getID(), "[AddString] Decorated string [%s] is too long for this ParaLine. Only %d symbols left", 
-									  dStr.str, width - buff.length());
-		
-		int pos = buff.length();
-		
-		buff.append(dStr.str);
-		
-		for ( Decor d : dStr.dpl )
-			InsertDecor( d.getCmd(), d.getPos() + pos, d.getData());
-	}	
 	
 	/**
 	 * Adds new decoration on ParaLine if the position is out of 
@@ -488,17 +481,15 @@ class ParaLine {
 	 * 
 	 * @param dec    -- Decoration command to add
 	 * @param pos	 -- position of decoration command starts at
-	 * @throws TFException
 	 */
-	public void InsertDecor( Decor.DeCmd dec, int pos, Object data)
-		throws TFException	{
+	public void InsertDecor( Decor.DeCmd dec, int pos, Object data ) {
 		
 		if ( pos > buff.length() )
 			pos = buff.length();
 		
-		decors.add(new Decor(this, dec, pos, data));
+		decors.add( new Decor(this, dec, pos, data) );
 		
-		decors.sort(decors.get(0));
+		decors.sort( decors.get(0) );
 	}
 	
 	
@@ -507,17 +498,22 @@ class ParaLine {
 	 * 
 	 * @param pos  -- position to check at
 	 * 
-	 * @return array of linked to position decorations. Might be empty 
+	 * @return list of linked to the given position decorations. Might be empty 
 	 */
-	public Decor[] GetDecorAt( int pos ) {
+	public List<Decor> GetDecorsAt( int pos ) {
+				
+//		List<Decor> dl = new ArrayList<Decor>();
+//		
+//		
+//		for ( Decor dec : decors )
+//			if ( dec.getPos() == pos )
+//				dl.add( dec );
+//		
+//		return dl.toArray(new Decor[0]);
 		
-		List<Decor> dl = new ArrayList<Decor>();
-		
-		for ( Decor dec : decors )
-			if ( dec.getPos() == pos )
-				dl.add(dec);
-		
-		return dl.toArray(new Decor[0]);
+		return decors.stream()
+				.filter( d -> d.getPos() == pos )
+				.collect( Collectors.toList() );
 	}
 
 	
@@ -532,16 +528,16 @@ class ParaLine {
 	 * @return String enclosed between cmd1 and cmd2 or empty string if 
 	 *         search fails
 	 * 
-	 * @throws TFException
 	 */
 	public String GetStringBetweenDecors ( Decor.DeCmd cmd1,
 			                               Decor.DeCmd cmd2,
-			                               int fromPos)
-		throws TFException {
+			                               int fromPos) {
 		
-		if ( fromPos < 0 || fromPos > buff.length() - 1 )
-			throw new
-				TFException( getID(), "GetStringBetweenDecors: fromPos is out of bounds!!!");
+		if ( fromPos < 0 || fromPos > buff.length() - 1 ) {
+			
+			log.severe( "[GetStringBetweenDecors] fromPos is out of bounds!!!");
+			return null;
+		}
 		
 		int sPos = 0, 
 			ePos = 0;
@@ -557,6 +553,7 @@ class ParaLine {
 					ePos = d.getPos();
 		
 		return buff.substring(sPos, ePos);
+		
 	}
 	
 	/**
@@ -565,14 +562,15 @@ class ParaLine {
 	 * @param from  -- substring starting point
 	 * 
 	 * @return First decoration object found in ParaLine substring
+	 *         Might be null
 	 */
 	public Decor GetFirstDecorFrom(Decor.DeCmd dc, int from) {
 		
-		for ( Decor dec : decors )
-			if ( dec.getCmd() == dc && dec.getPos() >= from )
-				return dec;
-		
-		return null; 
+		return decors.stream()
+				.sorted()
+				.filter( d -> d.getCmd() == dc && d.getPos() >= from )
+				.findFirst()
+				.orElse( null );
 	}
 	
 	/**
@@ -598,12 +596,9 @@ class ParaLine {
 	 * 
 	 * @param str -- string to process
 	 * 
-	 * @return new DecoratedStr
-	 * 
-	 * @throws TFException
+	 * @return new ParaLine
 	 */
-	public static DecoratedStr PrepareString(String str)
-		throws TFException {
+	public static ParaLine PrepareString( String str ) {
 		
 		StringBuilder sb = new StringBuilder(str.length());
 		int lastPos = 0,
@@ -612,62 +607,62 @@ class ParaLine {
 		List<Decor> decors = new ArrayList<Decor>();
 		Decor.DeCmd dCmd;
 		
-		Matcher m = Pattern.compile("\\&(\\w?)([\\+|-]?)(\\{(\\w*)\\})?+").matcher(str);
+		Matcher m = Pattern.compile( "\\&(\\w?)([\\+|-]?)(\\{(\\w*)\\})?+" ).matcher( str );
 		
 		while ( m.find() ) {
+			
 			sb.append(str.substring(lastPos, m.start()));
 			
-			switch ( m.group(1) ) {
+			switch ( m.group( 1 ) ) {
 				case "B" : 
-					if ( m.group(2).charAt(0) == '+' )
+					if ( m.group( 2 ).charAt( 0 ) == '+' )
 						dCmd = Decor.DeCmd.DCS_BOLD;
 					else
 						dCmd = Decor.DeCmd.DCE_BOLD;
 					break;
 
 				case "I" : 
-					if ( m.group(2).charAt(0) == '+' )
+					if ( m.group( 2 ).charAt( 0 ) == '+' )
 						dCmd = Decor.DeCmd.DCS_ITALIC;
 					else
 						dCmd = Decor.DeCmd.DCE_ITALIC;
 					break;
 
 				case "U" : 
-					if ( m.group(2).charAt(0) == '+' )
+					if ( m.group( 2 ).charAt( 0 ) == '+' )
 						dCmd = Decor.DeCmd.DCS_UNDERLINE;
 					else
 						dCmd = Decor.DeCmd.DCE_UNDERLINE;
 					break;
 
 				case "X" : 
-					if ( m.group(2).charAt(0) == '+' )
+					if ( m.group( 2 ).charAt( 0 ) == '+' )
 						dCmd = Decor.DeCmd.DCS_UPIDX;
 					else
 						dCmd = Decor.DeCmd.DCE_UPIDX;
 					break;
 
 				case "x" : 
-					if ( m.group(2).charAt(0) == '+')
+					if ( m.group( 2 ).charAt( 0 ) == '+')
 						dCmd = Decor.DeCmd.DCS_DNIDX;
 					else
 						dCmd = Decor.DeCmd.DCE_DNIDX;
 					break;
 					
 				case "F" : 
-					if ( m.group(2).charAt(0) == '+')
+					if ( m.group( 2 ).charAt( 0 ) == '+')
 						dCmd = Decor.DeCmd.DCS_FNOTE;
 					else
 						dCmd = Decor.DeCmd.DCE_FNOTE;
 					break;
 					
 				default :
-					throw new
-						TFException("PARALINE", 
-								String.format("[PerpareString] Invalid decoration command [%s] at position [%d] in str\n\"%s\"", 
-											  m.group(1), m.start(), str));
+					log.severe( String.format("[PerpareString] Invalid decoration command [%s] at position [%d] in str\n\"%s\"", 
+											  m.group( 1 ), m.start(), str ) );
+					return null;
 			}
 			
-			decors.add(new Decor(dCmd, m.start() - compensator, m.group(4)));
+			decors.add( new Decor( dCmd, m.start() - compensator, m.group( 4 ) ) );
 				
 			
 			// compensation offset for the DecoPair position
@@ -678,29 +673,15 @@ class ParaLine {
 		}
 		
 		if ( lastPos < str.length() )
-			sb.append(str.substring(lastPos));
+			sb.append( str.substring( lastPos ) );
 		
+	
+		ParaLine pl = new ParaLine( sb.length() );
+		pl.SetBuffer( sb );
+		pl.decors = decors;
 		
-		return new DecoratedStr(sb.toString(), decors.toArray(new Decor[0]));
+		return pl;
 	}
 	
-	/**
-	 * Returns content of ParaLine as a Decorated string object
-	 * 
-	 * @return decorated string equal to content of the ParaLine
-	 */
-	public DecoratedStr GetDecoratedStr() {
-		
-		return new DecoratedStr( buff.toString(), decors.toArray( new Decor[0] ) );
-	}
-	
-	
-	 
-	 //* @see textformatter.TFExcDataLoad#getID()
-	 
-	@Override
-	public String getID() {
-		return "PARALINE: ";
-	}
 }
 //-----------------------------------------------------------------------------
