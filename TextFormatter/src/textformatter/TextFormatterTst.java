@@ -14,7 +14,7 @@ public class TextFormatterTst {
 		
 		TextFormatter txtFmt = new TextFormatter();
 		
-		txtFmt.LoadDocument("C:\\wrk\\development\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
+		txtFmt.LoadDocument("C:\\wrk\\dev\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
 	}
 }
 

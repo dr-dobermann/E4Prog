@@ -10,6 +10,7 @@ package textformatter;
 
 
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.regex.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -30,9 +31,11 @@ import lombok.*;
  * @author dr.Dobermann
  */
 
-@Log
+
 class Decor 
 	implements Comparator<Decor> {
+	
+	private static final Logger log = Logger.getLogger(Decor.class.getName());
 	
 	// Decoration command. DCS means starting command, DCE means ending command 
 	public enum DeCmd {
@@ -63,6 +66,8 @@ class Decor
 				case DCE_CMD       : return DCS_CMD;
 			}
 			return dec;
+			
+			
 		}
 		
 		public boolean IsEnding( DeCmd dec ) {
@@ -187,8 +192,11 @@ class Decor
  * @author dr.Dobermann
  *
  */
-@Log
+
 class ParaLine {
+
+	private static final Logger log = 
+			Logger.getLogger( ParaLine.class.getName() );
 	
 	public enum TrimSide {
 		TS_LEFT,
