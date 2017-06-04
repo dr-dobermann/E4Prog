@@ -67,7 +67,14 @@ public class TextFormatter {
 		}		
 	}
 	
-
+	public ParaLine ProcessLine( String line ) {
+		
+		ParaLine pl = null;
+		
+		
+		
+		return pl;
+	}
 }
 
 
