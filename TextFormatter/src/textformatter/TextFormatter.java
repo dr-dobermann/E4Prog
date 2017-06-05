@@ -67,16 +67,169 @@ public class TextFormatter {
 		}		
 	}
 	
-	public ParaLine ProcessLine( String line ) {
-		
-		ParaLine pl = null;
-		
-		
-		
-		return pl;
-	}
 }
 
+
+class SentenceGenerator {
+	
+	private ArrayList<ParaLine> result = new ArrayList<>();
+
+	private Map<String, String> aliases = new HashMap<String, String>();
+
+	
+	private int fnoteLines = 0; 
+	
+	public ArrayList<ParaLine> getResult() {
+		return result;
+	}
+	
+	public void accumulate( String line ) {
+	/*
+
+		final Pattern cmdName = Pattern.compile( "^\\?(\\w+)" );
+		final Pattern sentenceEnd = Pattern.compile( "\"\\?\"\\.(?!,)\\W*|" +					  // "?, ".  it excludes strings as ".,"	
+				                                     "\\.\"\\)\\W*|\\?\"\\)\\W*|!\"\\)\\W*|" +    // ."), ?"), !") at the end of sentence 
+												     "\\.\\)\\W*|\\?\\)\\W*|!\\)\\W*|" +          // .),  ?)   !)
+												     "(!+\\?+)+\\W*|(\\?+!+)+\\W*|" +             // !?,  ?!
+													 "\\.+(?!,)\\W*|\\?+\\W*|!+\\W*" );           // ., ..., ?, !
+		Matcher m;
+		
+		if ( seReason == SEReason.SER_STREAM_END )
+			return null;
+		
+		seReason = SEReason.SER_UNKNOWN;
+		
+		// if there is empty string were read before, 
+		// return it
+		if ( emptyLine ) {
+			emptyLine = false;
+			seReason = SEReason.SER_EMPTY_LINE;
+			return "";
+		}
+
+		StringBuilder sb = new StringBuilder( "" );
+
+		// if there is no need to look for a formal end of the sentence but just for the end of the line
+		if ( !getFullSentence && uSen.length() > 0 ) {
+			sb.append( uSen );
+			uSen.delete( 0, uSen.length() );
+			
+			return sb.toString();
+		}
+		
+		String str = ReadLine();
+		
+		while ( str != null ) {
+			
+			// if empty string is read and unfinished string is not empty,
+			// return unfinished sentence and fire emptyLine flag.
+			// if unfinished sentence is empty, return it
+			if ( str.trim().length() == 0 ) {
+				
+				if ( uSen.length() > 0 ) {
+					sb.append( uSen );
+					uSen.delete( 0, uSen.length() );
+					emptyLine = true;
+					seReason = SEReason.SER_EMPTY_LINE;
+				}
+				
+				break;
+			}
+			
+			if ( getFullSentence ) {
+				
+				// Check on sentence end or command start.
+				// If sentence end is occurred, return substring with it and
+				// previous buffer. Rest of the string save as unfinished sentence
+				m = sentenceEnd.matcher( str );
+				if ( m.find() ) {
+					if ( uSen.length() > 0 ) {
+						sb.append( uSen );
+						uSen.delete( 0, uSen.length() );
+					}
+					sb.append( str.substring( 0, m.end() ) );
+					uSen.append( str.substring( m.end() ) );
+					seReason = SEReason.SER_PUNCT;
+					
+					break;
+				}
+				
+				// If command starts, and unfinished sentence is not empty, return it
+				m = cmdName.matcher(str);
+				if ( m.find() ) {
+					if ( uSen.length() > 0 ) {
+						sb.append(uSen);
+						uSen.delete(0, uSen.length());
+						uSen.append(str);
+						seReason = SEReason.SER_CMD;
+						break;
+					}	
+				}
+				
+				// append the str to an unfinished sentence
+				// and read next line;
+					uSen.append(str);
+					str = ReadLine();
+			}
+			else {
+					sb.append(str);
+					seReason = SEReason.SER_EOL;
+					break;
+				}
+		}
+		
+		if ( str == null ) {
+			if ( uSen.length() > 0 ) {
+				sb.append(uSen);
+				uSen.delete(0, uSen.length());
+			}
+
+			seReason = SEReason.SER_STREAM_END;
+			return null;
+		}
+		
+		return sb.toString();	
+	 */
+	}
+	
+	public void combine( SentenceGenerator sg ) {
+		
+	}
+	
+	/**
+	 * Replaces all aliases to their original values
+	 * 
+	 * @param str  -- string to process 
+	 * 
+	 * @return string with replaced aliases
+	 */
+	private String ReplaceAliases( String str ) {
+		
+		for ( String alias : aliases.keySet() )
+			str.replaceAll(alias, aliases.get(alias));
+		
+		return str;
+	}
+	
+
+	/**
+	 * Adds new alias into aliases table or clears all aliases
+	 * 
+	 * @param newName -- new alias for oldName. If newName is empty, 
+	 *                   then all aliases will be deleted 
+	 * @param oldName -- old name for the alias
+	 */
+	public void SetAlias(String newName, String oldName) {
+		
+		if ( newName.length() == 0 ) {
+			aliases.clear();
+			return;
+		}
+		
+		aliases.put(newName, oldName);
+	}
+	
+}
 
 
 /*
