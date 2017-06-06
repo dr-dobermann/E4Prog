@@ -69,7 +69,7 @@ Command list:
 name        | parameters (values) _ defaults _                         | closes the
 description |                                                          | paragraph
 -----------------------------------------------------------------------------------
-size         width height _ 72 40 _                                     yes
+size         width height _ 72 40 _                                      yes
 Sets the page size
 
 align        type (as_is, left, right, 
@@ -82,50 +82,50 @@ fill                  -- text placed from left to right with no trail
                          or leading spaces. Extra spaces are added 
                          between the words where necessary
                          
-par          indent spacesB spaces A _ 3 0 0 _                          yes
+par          indent spacesB spaces A _ 3 0 0 _                           yes
 Starts new paragraph with given indent and spaces intervals 
 before and after paragraphs
 
-margin       left right                                                 yes
+margin       left right                                                  yes
 Sets the margins from left and rights for next paragraphs 
 
 interval     lines _ 1 _
 Sets interval between the paragraph lines                                yes
 
-feedlines    lines_count                                                yes
+feedlines    lines_count                                                 yes
 Feed lines_count empty lines with given interval. 
 Does not add empty lines on a new page start.
 
-feed          lines _ 0 _                                               yes
+feed          lines _ 0 _                                                yes
 Feed exactly lines lines ignoring the interval settings.
 Does not add empty lines on a new page start.  
 
-newpage                                                                 yes
+newpage                                                                  yes
 Starts new page
 
-left          n                                                         yes
+left          n                                                          yes
 Checks if there are at least n lines of the page. 
 If there are less that n lines, then next page starts.
 If there are more that n lines left on the page, the command is ignored
 
-header        height pn_line pn_position                                no
+header        height pn_line pn_position                                 no
 Sets page header for next pages in height lines. 
 Page number printed in pn_line on pn_position (left, right, center).
 Command with 0 height disables the page headers for next pages
 
-pnum          n                                                         no
+pnum          n                                                          no
 Sets current page number counter
 
-pb                                                                      yes
+pb                                                                       yes
 Ends the current paragraph  
 
-footnote      nstrings                                                  no
+footnote      nstrings                                                   no
 Adds a footnote to the page. Footnote is formed from the next nstrings. 
 A new footnote pops up the existed ones.
 If there is no place to put the whole footnote on the page, 
 the rest of it moves to the next page
 
-alias         new_name old_name                                         no
+alias         new_name old_name                                          no
 Add alias for the symbol to mask it further
 
 Decoration commands:

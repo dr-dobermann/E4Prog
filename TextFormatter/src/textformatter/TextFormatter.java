@@ -13,6 +13,7 @@ package textformatter;
 import lombok.*;
 
 import java.util.*;
+import java.util.regex.*;
 import java.io.IOException;
 import java.nio.file.*;
 
@@ -31,7 +32,7 @@ public class TextFormatter {
 	private @Getter int[] margins = new int[] {0, 0};
 	private @Getter int indent = 3;
 	
-	private int NoteID = 1;
+	private static int NoteID = 1;
 	private int PageNum = 1;
 	
 	private int emptyLinesCount = 0;
@@ -40,8 +41,6 @@ public class TextFormatter {
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
 	private @Getter int headerLine;
 	private List<String> header = null;
-	
-	private int fnLines = -1;
 	
 	private String path = null;
 	
@@ -67,33 +66,76 @@ public class TextFormatter {
 		}		
 	}
 	
+	public static int GetFnoteID () {
+		
+		return NoteID++;
+	}
+	
 }
 
 
 class SentenceGenerator {
 	
 	private ArrayList<ParaLine> result = new ArrayList<>();
-
+	StringBuilder currLine = new StringBuilder();
+	
 	private Map<String, String> aliases = new HashMap<String, String>();
 
+	private int fnoteLines = 0;
+	private Footnote fnote = null;
 	
-	private int fnoteLines = 0; 
+	private boolean emptyLine = false;
+	
+	public SentenceGenerator() {
+		
+	}
 	
 	public ArrayList<ParaLine> getResult() {
 		return result;
 	}
 	
 	public void accumulate( String line ) {
-	/*
+	
 
-		final Pattern cmdName = Pattern.compile( "^\\?(\\w+)" );
+		final Pattern cmdName = Pattern.compile( "^\\?(\\b(size|align|par|margin|interval|feedlines|feed|newpage|left|header|pnum|pb|footnote|alias)\\b)?" );
 		final Pattern sentenceEnd = Pattern.compile( "\"\\?\"\\.(?!,)\\W*|" +					  // "?, ".  it excludes strings as ".,"	
 				                                     "\\.\"\\)\\W*|\\?\"\\)\\W*|!\"\\)\\W*|" +    // ."), ?"), !") at the end of sentence 
 												     "\\.\\)\\W*|\\?\\)\\W*|!\\)\\W*|" +          // .),  ?)   !)
 												     "(!+\\?+)+\\W*|(\\?+!+)+\\W*|" +             // !?,  ?!
 													 "\\.+(?!,)\\W*|\\?+\\W*|!+\\W*" );           // ., ..., ?, !
-		Matcher m;
+		Matcher m = null;
+		Command cmd = null;
+
+		int lastLineID = result.size() - 1;
 		
+		line = ReplaceAliases( line );
+		
+		m = cmdName.matcher( line );
+		if ( m.find() ) {
+			
+			cmd = ParseCmd( line );
+			
+			if ( cmd.getCommand() == Command.CommandName.CMD_FOOTNOTE )
+				
+				fnoteLines = Integer.parseInt( cmd.getParams().get( "lines" ) );
+			
+			else {
+				
+				FlushBuffer();
+				
+				ParaLine pl = new ParaLine( 0 );				
+				pl.InsertDecor( Decor.DeCmd.DCE_CMD, 0, cmd );
+				result.add( pl );
+				
+				return;
+			}
+		}
+		
+		if ( line.trim().length() == 0 ) {
+			
+			FlushBuffer();
+		}
+	/*	
 		if ( seReason == SEReason.SER_STREAM_END )
 			return null;
 		
@@ -195,6 +237,22 @@ class SentenceGenerator {
 	public void combine( SentenceGenerator sg ) {
 		
 	}
+
+	private void FlushBuffer() {
+	
+		if ( currLine.length() > 0 ) {
+			
+			result.add( ParaLine.PrepareString( currLine.toString() ) );
+			currLine.delete( 0, currLine.length() );
+		}
+	}
+
+	private Command ParseCmd( String line ) {
+		
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	
 	/**
 	 * Replaces all aliases to their original values
@@ -227,6 +285,14 @@ class SentenceGenerator {
 		}
 		
 		aliases.put(newName, oldName);
+	}
+	
+	private void AddFnoteLine( ParaLine line ) {
+		
+		if ( fnote == null )
+			fnote = new Footnote( TextFormatter.GetFnoteID() );
+		
+		fnote.AddLine( line );
 	}
 	
 }

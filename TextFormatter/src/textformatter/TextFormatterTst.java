@@ -8,14 +8,38 @@
 ********************************************************/
 package textformatter;
 
+
+import java.util.regex.*;
+
 public class TextFormatterTst {
 	
 	public static void main ( String[] args ) {
 		
 		TextFormatter txtFmt = new TextFormatter();
 		
-		txtFmt.LoadDocument("C:\\wrk\\development\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
+		txtFmt.LoadDocument("C:\\wrk\\dev\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
+		
+		TestRegExp();
 	}
+
+	private static void TestRegExp() {
+		String str = "?align condencedThis  is  a   test &B+string  with&B- some sentences in it ... Is this a last sentence? No!" +
+                "(There might be more.) How long could it countinue??? What's &U+going&U- on?!!?!" +
+                "Could anybody expalain&F+{test} me&F- what happened here?!!!";
+	
+		//System.out.println("[" + str.matches("\\.?.+") + "]");
+	
+		Matcher m = Pattern.compile("^\\?(\\b(align|par|size)\\b)?").matcher(str);
+		
+		while ( m.find() ) {
+		
+			System.out.println(str.substring(m.start(), m.end()) + " ");
+			
+			for ( int i = 1; i <= m.groupCount(); i++ )
+				System.out.printf("Group #%d is %s at %d\n", i, m.group(i), m.start(i));
+		}
+	}
+
 }
 
 /*
@@ -46,22 +70,6 @@ public class TextFormatterTst {
 		
 	}
 
-	private static void TestRegExp() {
-		String str = "?align condencedThis  is  a   test &B+string  with&B- some sentences in it ... Is this a last sentence? No!" +
-                "(There might be more.) How long could it countinue??? What's &U+going&U- on?!!?!" +
-                "Could anybody expalain&F+{test} me&F- what happened here?!!!";
-	
-		//System.out.println("[" + str.matches("\\.?.+") + "]");
-	
-		Matcher m = Pattern.compile("\\&(\\w?)([\\+|-]?)(\\{(\\w*)\\})?+").matcher(str);
-		while ( m.find() ) {
-		
-			System.out.println(str.substring(m.start(), m.end()) + " ");
-			
-			for ( int i = 1; i <= m.groupCount(); i++ )
-				System.out.printf("Group #%d is %s at %d\n", i, m.group(i), m.start(i));
-		}
-	}
 	
 	private static void TestPrepareString() {
 		try {

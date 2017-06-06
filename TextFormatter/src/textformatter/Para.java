@@ -9,6 +9,9 @@
 package textformatter;
 
 
+import java.util.ArrayList;
+import java.util.HashMap;
+
 import lombok.*;
 
 class Para {
@@ -21,6 +24,46 @@ class Para {
 		PA_FILL
 	};
 	
+}
+
+class Footnote {
+	
+	@Getter ArrayList<ParaLine> lines = new ArrayList<>();
+	
+	@Getter int NoteID;
+	
+	public Footnote( int id ) {
+		NoteID = id;
+	}
+	
+	public void AddLine( ParaLine pl ) {
+		
+		lines.add( pl );
+	}
+}
+
+class Command {
+	
+	enum CommandName { 
+		CMD_SIZE, 
+		CMD_ALIGN,
+		CMD_PAR,
+		CMD_MARGIN,
+		CMD_INTERVAL,
+		CMD_FEEDLINE,
+		CMD_FEED,
+		CMD_NEWPAGE,
+		CMD_LEFT,
+		CMD_HEADER, 
+		CMD_PNUM, 
+		CMD_PB, 
+		CMD_FOOTNOTE,
+		CMD_ALIAS
+	}
+	
+	@Getter CommandName command;
+	
+	@Getter HashMap<String, String> params = new HashMap<>();
 }
 
 /*

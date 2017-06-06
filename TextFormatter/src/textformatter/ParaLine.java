@@ -495,7 +495,7 @@ class ParaLine {
 		if ( pos > buff.length() )
 			pos = buff.length();
 		
-		decors.add( new Decor(this, dec, pos, data) );
+		decors.add( new Decor( this, dec, pos, data ) );
 		
 		decors.sort( decors.get(0) );
 	}
