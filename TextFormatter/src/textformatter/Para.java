@@ -64,6 +64,18 @@ class Command {
 	@Getter CommandName command;
 	
 	@Getter HashMap<String, String> params = new HashMap<>();
+	
+	public Command( Command.CommandName cmd ) {
+		
+		command = cmd;
+	}
+	
+	public Command AddParam( String pname, String pvalue ) {
+		
+		params.put( pname, pvalue );
+		
+		return this;
+	}
 }
 
 /*

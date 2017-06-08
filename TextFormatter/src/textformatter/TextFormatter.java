@@ -84,7 +84,7 @@ class SentenceGenerator {
 	private int fnoteLines = 0;
 	private Footnote fnote = null;
 	
-	private boolean emptyLine = false;
+	private int emptyLines = 0;
 	
 	public SentenceGenerator() {
 		
@@ -98,12 +98,8 @@ class SentenceGenerator {
 	
 
 		final Pattern cmdName = Pattern.compile( "^\\?(\\b(size|align|par|margin|interval|feedlines|feed|newpage|left|header|pnum|pb|footnote|alias)\\b)?" );
-		final Pattern sentenceEnd = Pattern.compile( "\"\\?\"\\.(?!,)\\W*|" +					  // "?, ".  it excludes strings as ".,"	
-				                                     "\\.\"\\)\\W*|\\?\"\\)\\W*|!\"\\)\\W*|" +    // ."), ?"), !") at the end of sentence 
-												     "\\.\\)\\W*|\\?\\)\\W*|!\\)\\W*|" +          // .),  ?)   !)
-												     "(!+\\?+)+\\W*|(\\?+!+)+\\W*|" +             // !?,  ?!
-													 "\\.+(?!,)\\W*|\\?+\\W*|!+\\W*" );           // ., ..., ?, !
 		Matcher m = null;
+
 		Command cmd = null;
 
 		int lastLineID = result.size() - 1;
@@ -123,9 +119,7 @@ class SentenceGenerator {
 				
 				FlushBuffer();
 				
-				ParaLine pl = new ParaLine( 0 );				
-				pl.InsertDecor( Decor.DeCmd.DCE_CMD, 0, cmd );
-				result.add( pl );
+				result.add( ParaLine.CreateCmdPLine( cmd ) );
 				
 				return;
 			}
@@ -134,6 +128,30 @@ class SentenceGenerator {
 		if ( line.trim().length() == 0 ) {
 			
 			FlushBuffer();
+			
+			emptyLines++;
+		}
+		else 
+			if ( emptyLines > 1 ) {
+				// if there are more than one empty lines, add paragraph break command
+				emptyLines = 0;
+				result.add( ParaLine.CreateCmdPLine( new Command( Command.CommandName.CMD_PB ) ) );
+			}
+		
+		ArrayList<String> lines = SplitLineOnPunctuation( line );
+		currLine.append( lines.get(0) );
+		lines.set( 0, currLine.toString() );
+		
+		
+		if ( fnoteLines > 0 ) {
+			for ( String str : lines )
+				AddFnoteLine( ParaLine.PrepareString( str ) );
+			
+			if ( --fnoteLines == 0 )
+				;
+		}
+		else {
+			
 		}
 	/*	
 		if ( seReason == SEReason.SER_STREAM_END )
@@ -268,7 +286,6 @@ class SentenceGenerator {
 		
 		return str;
 	}
-	
 
 	/**
 	 * Adds new alias into aliases table or clears all aliases
@@ -287,12 +304,46 @@ class SentenceGenerator {
 		aliases.put(newName, oldName);
 	}
 	
+	/**
+	 * Adds new ParaLine into footnote buffer
+	 * 
+	 * @param line -- line to add
+	 */
 	private void AddFnoteLine( ParaLine line ) {
 		
 		if ( fnote == null )
 			fnote = new Footnote( TextFormatter.GetFnoteID() );
 		
 		fnote.AddLine( line );
+	}
+	
+	private ArrayList<String> SplitLineOnPunctuation( String str ) {
+		
+		ArrayList<String> lines = new ArrayList<>();
+		
+		final Pattern sentenceEnd = Pattern.compile( "\"\\?\"\\.(?!,)\\W*|" +					  // "?, ".  it excludes strings as ".,"	
+                "\\.\"\\)\\W*|\\?\"\\)\\W*|!\"\\)\\W*|" +    // ."), ?"), !") at the end of sentence 
+			     "\\.\\)\\W*|\\?\\)\\W*|!\\)\\W*|" +          // .),  ?)   !)
+			     "(!+\\?+)+\\W*|(\\?+!+)+\\W*|" +             // !?,  ?!
+				 "\\.+(?!,)\\W*|\\?+\\W*|!+\\W*" );           // ., ..., ?, !
+		
+		Matcher m;
+		
+		while ( str.length() > 0 ) {
+			
+			m = sentenceEnd.matcher( str );
+			if ( m.find() ) {
+				
+				lines.add( str.substring( 0, m.end() ) );
+				str = str.substring( m.end() );
+			}
+			else {
+				lines.add( str );
+				break;
+			}
+		}
+		
+		return lines;
 	}
 	
 }

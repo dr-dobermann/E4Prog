@@ -25,7 +25,7 @@ Notes:
   1.2. Command ?center is deleted as excessive one
   
 2. Double empty lines in input stream closes current paragraph. More 
-   single line in a row just ignored.
+   single lines in a row are just ignored.
    
 3. Single empty line closes current sentence. 
 
@@ -35,11 +35,11 @@ Notes:
    
 5. Footnote should be on the same page as the paragraph it's related to. 
    If there is no space for the whole footnote, part of it moves to the
-   next page except one last line. 
-   If there is still no enough space on the page, part of
+   next page except the first line. 
+   If there is still no enough space on the page for a full footnote, part of
    the paragraph up to the line with link to the footnote also moves to the next page.
    
-6. Page could not become wider than it was initially set. If a such situation
+6. Page width could not become wider than it was initially set. If a such situation
    appears the new page starts.
 
 7. Footnotes takes initial width of the page (max width) and does not uses
@@ -49,10 +49,10 @@ Notes:
 Strategy:
 ===================
 
-1. Stream of input lines goes through few mappers and as a result
-   we would have a list of formatted lines with linked to them decorations.
+1. Stream of input lines goes through few mappers|collectors and as a result
+   we would have a list of formatted pages with linked to them decorations.
    
-   1.1. First map converts commands out and transforms the raw input lines into ParaLines
+   1.1. First collector converts commands out and transforms the raw input lines into ParaLines
         by extracting decoration commands and anchoring them to the defined
         positions.
    

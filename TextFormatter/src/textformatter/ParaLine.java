@@ -122,19 +122,18 @@ class Decor
 	 * @param newPos  -- new position inside a new owner
 	 * @throws TFException
 	 */
-	public void SetLine(ParaLine newPL, int newPos) {
+	public Decor SetLine(ParaLine newPL, int newPos) {
 
-		if ( newPL == line )
-			return;
-		
 		line = newPL;
 		
 		if ( newPos < 0 || newPos > line.GetLength() ) {
 			log.severe( String.format( "[SetLine] New position [%d] is out of bounds of the line!!!", newPos ) );
-			return;
+			return null;
 		}
 
 		pos = newPos;
+		
+		return this;
 	}
 
 	/**
@@ -466,7 +465,7 @@ class ParaLine {
 	 * @param str     -- string to append
 	 * @param decors  -- array of decorations to insert in the begin of the appended string
 	 */
-	public void AddString( String str, Decor[] decors) {
+	public void AddString( String str, Decor[] NewDecors) {
 		
 		if ( str.length() > width - buff.length() ) {
 			log.severe( String.format( "[AddString] String [%s] is too long for this ParaLine. Only %d symbols left", 
@@ -474,14 +473,38 @@ class ParaLine {
 			return;
 		}
 		
-		int pos = buff.length();
+		int shift = buff.length();
 		
 		buff.append( str );
 		
-		for ( Decor d : decors ) 
-			InsertDecor( d.getCmd(), d.getPos() + pos, d.getData() );
+		decors.addAll(Arrays.stream( NewDecors )
+						    .map( d -> d.SetLine( this, d.getPos() + shift ) )
+						    .collect( Collectors.toList() )
+					 );
 	}
 	
+	/**
+	 * Adds new ParaLine to the existed one. Extends the width of resulted string 
+	 * when needed
+	 * 
+	 * @param pl -- added ParaLine
+	 * 
+	 * @return concatenated ParaLine
+	 */
+	public ParaLine AddPline( ParaLine pl ) {
+		
+		int shift = width;
+		
+		width = width + pl.getWidth() > width ? width + pl.getWidth() : width;
+		
+		
+		buff.append( pl.buff );
+		decors.addAll( pl.decors.stream()
+								 .map( d -> d.SetLine( this, d.getPos() + shift ) )
+								 .collect( Collectors.toList() ) );
+				
+		return this;
+	}
 	
 	/**
 	 * Adds new decoration on ParaLine if the position is out of 
@@ -608,7 +631,7 @@ class ParaLine {
 	 */
 	public static ParaLine PrepareString( String str ) {
 		
-		StringBuilder sb = new StringBuilder(str.length());
+		StringBuilder sb = new StringBuilder( str.length() );
 		int lastPos = 0,
 			compensator = 0;
 		
@@ -687,6 +710,22 @@ class ParaLine {
 		ParaLine pl = new ParaLine( sb.length() );
 		pl.SetBuffer( sb );
 		pl.decors = decors;
+		
+		return pl;
+	}
+	
+	/**
+	 * Creates new empty ParaLine with command decoration in it
+	 * 
+	 * @param cmd -- related command decoration
+	 * 
+	 * @return ParaLine with 0 length with cmd Command decoration in it
+	 */
+	public static ParaLine CreateCmdPLine( Command cmd ) {
+		
+		ParaLine pl = new ParaLine(0);
+		
+		pl.InsertDecor( Decor.DeCmd.DCE_CMD, 0, cmd);
 		
 		return pl;
 	}
