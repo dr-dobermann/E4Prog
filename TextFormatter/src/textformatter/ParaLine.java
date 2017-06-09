@@ -169,6 +169,12 @@ class Decor
 	}	
 	 
 	@Override
+	public String toString() {
+		
+		return String.format( "[%s at %d with {%s}]", cmd.name(), pos, data == null ? "NULL" : data.toString() );
+	}
+	
+	@Override
 	public int compare(Decor o1, Decor o2) {
 		if ( o1.pos < o2.pos )
 			return -1;
@@ -638,7 +644,7 @@ class ParaLine {
 		List<Decor> decors = new ArrayList<Decor>();
 		Decor.DeCmd dCmd;
 		
-		Matcher m = Pattern.compile( "\\&(\\w?)([\\+|-]?)(\\{(\\w*)\\})?+" ).matcher( str );
+		Matcher m = Pattern.compile( "\\&([BIUXxF]{1})([\\+|-]{1})(\\{(\\w*)\\})?" ).matcher( str );
 		
 		while ( m.find() ) {
 			
@@ -708,7 +714,7 @@ class ParaLine {
 		
 	
 		ParaLine pl = new ParaLine( sb.length() );
-		pl.SetBuffer( sb );
+		pl.buff.append( sb );
 		pl.decors = decors;
 		
 		return pl;
@@ -728,6 +734,12 @@ class ParaLine {
 		pl.InsertDecor( Decor.DeCmd.DCE_CMD, 0, cmd);
 		
 		return pl;
+	}
+	
+	@Override
+	public String toString() {
+		
+		return String.format( "\"%s\" decorated by %s", buff.toString(), decors.toString() );
 	}
 	
 }

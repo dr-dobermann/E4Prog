@@ -44,6 +44,10 @@ public class TextFormatter {
 	
 	private String path = null;
 	
+	private Map<String, String> aliases = new HashMap<String, String>();
+
+	final Pattern cmdName = Pattern.compile( "^\\?(\\b(size|align|par|margin|interval|feedlines|feed|newpage|left|header|pnum|pb|footnote|alias)\\b)?" );
+	
 	TextFormatter() {
 		
 	}
@@ -59,7 +63,12 @@ public class TextFormatter {
 			try {
 			
 				Files.lines( Paths.get( this.path ) )
-					.forEach( line -> System.out.println( line ) );
+					.sequential()
+					.map( l -> ReplaceAliases( l ) )
+					.map( l -> ProcessCmd( l ) )
+					.filter( l -> l != null )
+					.map( l -> ParaLine.PrepareString( l ) )
+					.forEach( line -> System.out.println( line.toString() ) );
 			} catch ( IOException ex ) {
 				ex.printStackTrace();
 			}
@@ -69,6 +78,57 @@ public class TextFormatter {
 	public static int GetFnoteID () {
 		
 		return NoteID++;
+	}
+	
+	/**
+	 * Check the string and if it consists of a command, process the command
+	 * and return null instead the string
+	 * 
+	 * @param str -- String to process
+	 * 
+	 * @return null if there is command in the string or string itself if there
+	 *         is no command in the string
+	 */
+	public String ProcessCmd( String str ) {
+		
+		Matcher m = cmdName.matcher( str );
+		
+		if ( m.find() )
+			return null;
+		
+		return str;
+	}
+
+	/**
+	 * Replaces all aliases to their original values
+	 * 
+	 * @param str  -- string to process 
+	 * 
+	 * @return string with replaced aliases
+	 */
+	private String ReplaceAliases( String str ) {
+		
+		for ( String alias : aliases.keySet() )
+			str.replaceAll(alias, aliases.get(alias));
+		
+		return str;
+	}
+
+	/**
+	 * Adds new alias into aliases table or clears all aliases
+	 * 
+	 * @param newName -- new alias for oldName. If newName is empty, 
+	 *                   then all aliases will be deleted 
+	 * @param oldName -- old name for the alias
+	 */
+	public void SetAlias(String newName, String oldName) {
+		
+		if ( newName.length() == 0 ) {
+			aliases.clear();
+			return;
+		}
+		
+		aliases.put(newName, oldName);
 	}
 	
 }

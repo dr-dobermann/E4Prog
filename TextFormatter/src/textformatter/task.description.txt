@@ -1,12 +1,12 @@
 ?align as_is
-Task description:
+&B+Task description:&B-
 ====================
 
 ?align fill
 This task was taken from the book Etudes for Programmers by Charles Wetherell
 ?footnote 1
 (c) 1987 by Prentice Hall, Inc., Englewood Cliffs, New Jersey 07632.
-This is a third task from the book.
+. This is a third task from the book.
 
 The task is about creating a text formatter which could process an input text stream and provide an 
 output text stream formatted according to the formatting commands placed in an input stream.
@@ -16,13 +16,14 @@ Every command starts at first position of input steam string from letter "?".
 
 
 ?align as_is
-Notes:
+&B+Notes:&B-
 ===================
 1. The task conditions were little bit changed from the original assignment 
 
   1.1. Alignment sets as as_is, left, right, centered and fill(proportional)
   
-  1.2. Command ?center is deleted as excessive one
+  1.2. Command ?center is deleted as excessive one. Its functional was transferred to
+       ?align command.
   
 2. Double empty lines in input stream closes current paragraph. More 
    single lines in a row are just ignored.
@@ -46,13 +47,18 @@ Notes:
    related paragraph width.
 
 
-Strategy:
+&B+Strategy:&B-
 ===================
 
 1. Stream of input lines goes through few mappers|collectors and as a result
    we would have a list of formatted pages with linked to them decorations.
    
-   1.1. First collector converts commands out and transforms the raw input lines into ParaLines
+   1.1. First mapper replaces aliases to their values
+   
+   1.2. Second mapper converts commands into null strings and saves changes current context
+        according to the command. Followed filter removes null string from the stream.
+        
+   1.3. Third mapper transforms the raw input lines into ParaLines
         by extracting decoration commands and anchoring them to the defined
         positions.
    
@@ -63,7 +69,7 @@ Strategy:
 
 
 
-Command list:
+&B+Command list:&B-
 ====================
 -----------------------------------------------------------------------------------
 name        | parameters (values) _ defaults _                         | closes the
@@ -128,13 +134,15 @@ the rest of it moves to the next page
 alias         new_name old_name                                          no
 Add alias for the symbol to mask it further
 
-Decoration commands:
+&B+Decoration commands:&B-
 ===================
 ?align fill
 There are could be text decoration commands inside the paragraph.
 They look as &<command_name>+/-. 
 <command_name> could consists of a few commands combined
-For some commands it could be possible to provide additional information in 
+?footnote 1
+Not realized yet. Now every decoration could consist only one command
+. For some commands it could be possible to provide additional information in 
 {} after the starting command.
 ?footnote 1
 Only realized for footnotes yet.
