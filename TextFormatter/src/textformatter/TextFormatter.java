@@ -66,6 +66,16 @@ public class TextFormatter {
 					.sequential()
 					.map( l -> ReplaceAliases( l ) )
 					.map( l -> ProcessCmd( l ) )
+					//.filter( l -> l.matches( "^!CMD_\\w*" ) )
+					.map( l -> {
+							if ( l.matches( "^!CMD_\\w*" ) ) { 
+							   	  System.out.printf( "                 COMMAND %s\n", l);
+								  return null;
+							   }
+							   else
+								   return l;
+							}
+						)
 					.filter( l -> l != null )
 					.map( l -> ParaLine.PrepareString( l ) )
 					.forEach( line -> System.out.println( line.toString() ) );
@@ -94,7 +104,7 @@ public class TextFormatter {
 		Matcher m = cmdName.matcher( str );
 		
 		if ( m.find() )
-			return null;
+			return String.format( "!CMD_%s", m.group(1).toUpperCase() );
 		
 		return str;
 	}
