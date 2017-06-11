@@ -44,8 +44,7 @@ class Decor
 						DCS_UNDERLINE,   DCE_UNDERLINE,
 						DCS_UPIDX,       DCE_UPIDX,
 						DCS_DNIDX,       DCE_DNIDX,
-						DCS_FNOTE,       DCE_FNOTE,
-						DCS_CMD,         DCE_CMD;
+						DCS_FNOTE,       DCE_FNOTE;
 		
 		public DeCmd GetOpposite( DeCmd dec ) {
 			switch ( dec ) {
@@ -55,7 +54,6 @@ class Decor
 				case DCS_UPIDX     : return DCE_UPIDX;
 				case DCS_DNIDX     : return DCE_DNIDX;
 				case DCS_FNOTE     : return DCE_FNOTE;
-				case DCS_CMD       : return DCE_CMD;
 				
 				case DCE_BOLD      : return DCS_BOLD;
 				case DCE_ITALIC    : return DCS_ITALIC;
@@ -63,7 +61,6 @@ class Decor
 				case DCE_UPIDX     : return DCS_UPIDX;
 				case DCE_DNIDX     : return DCS_DNIDX;
 				case DCE_FNOTE     : return DCS_FNOTE;
-				case DCE_CMD       : return DCS_CMD;
 			}
 			return dec;
 			
@@ -74,6 +71,50 @@ class Decor
 			
 			return dec.name().matches("DCE.*");
 		}
+		
+		/**
+		 * Returns Decoration Command enum item by its linked letter and on/off flag
+		 * 
+		 * @param letter -- letter linked to enum item name (B for Bold, I for Italic and so on)
+		 * @param onCmd  -- on/off flag for the decoration. If it's on, then DCS prefix used, DCE for the off.
+		 * @return
+		 */
+		public static DeCmd getDeCmd ( char letter, boolean onCmd ) {
+			
+			StringBuilder cmdName = new StringBuilder( 20 );
+			
+			cmdName.append( "DC" ).append( onCmd ? 'S' : 'E' ).append( '_' );
+			
+			switch ( letter ) {
+				
+				case 'B' :
+					cmdName.append( "BOLD" );
+					break;
+				case 'I' :
+					cmdName.append( "ITALIC" );
+					break;
+				case 'U' :
+					cmdName.append( "UNDERLINE" );
+					break;
+				case 'X' :
+					cmdName.append( "UPIDX" );
+					break;
+				case 'x' :
+					cmdName.append( "DNIDX" );
+					break;
+			}
+			
+			DeCmd cmd;
+			try {
+				cmd = DeCmd.valueOf( cmdName.toString() );
+			}
+			catch ( IllegalArgumentException  ex ) {
+				cmd = null;
+			}
+			
+			return cmd;		
+		}
+		
 	};
 	
 	private @Getter ParaLine line;
@@ -643,64 +684,23 @@ class ParaLine {
 		
 		List<Decor> decors = new ArrayList<Decor>();
 		Decor.DeCmd dCmd;
+
+		Matcher m = Pattern.compile( "\\&([BIUXx]+)([\\+|-]{1})(\\{(\\w*)\\})?" ).matcher( str );
 		
-		Matcher m = Pattern.compile( "\\&([BIUXxF]{1})([\\+|-]{1})(\\{(\\w*)\\})?" ).matcher( str );
+		boolean onCmd;
 		
 		while ( m.find() ) {
 			
 			sb.append(str.substring(lastPos, m.start()));
+			onCmd = m.group( 2 ).charAt( 0 ) == '+';
 			
-			switch ( m.group( 1 ) ) {
-				case "B" : 
-					if ( m.group( 2 ).charAt( 0 ) == '+' )
-						dCmd = Decor.DeCmd.DCS_BOLD;
-					else
-						dCmd = Decor.DeCmd.DCE_BOLD;
-					break;
-
-				case "I" : 
-					if ( m.group( 2 ).charAt( 0 ) == '+' )
-						dCmd = Decor.DeCmd.DCS_ITALIC;
-					else
-						dCmd = Decor.DeCmd.DCE_ITALIC;
-					break;
-
-				case "U" : 
-					if ( m.group( 2 ).charAt( 0 ) == '+' )
-						dCmd = Decor.DeCmd.DCS_UNDERLINE;
-					else
-						dCmd = Decor.DeCmd.DCE_UNDERLINE;
-					break;
-
-				case "X" : 
-					if ( m.group( 2 ).charAt( 0 ) == '+' )
-						dCmd = Decor.DeCmd.DCS_UPIDX;
-					else
-						dCmd = Decor.DeCmd.DCE_UPIDX;
-					break;
-
-				case "x" : 
-					if ( m.group( 2 ).charAt( 0 ) == '+')
-						dCmd = Decor.DeCmd.DCS_DNIDX;
-					else
-						dCmd = Decor.DeCmd.DCE_DNIDX;
-					break;
-					
-				case "F" : 
-					if ( m.group( 2 ).charAt( 0 ) == '+')
-						dCmd = Decor.DeCmd.DCS_FNOTE;
-					else
-						dCmd = Decor.DeCmd.DCE_FNOTE;
-					break;
-					
-				default :
-					log.severe( String.format("[PerpareString] Invalid decoration command [%s] at position [%d] in str\n\"%s\"", 
-											  m.group( 1 ), m.start(), str ) );
-					return null;
+			for ( int i = 0; i < m.group( 1 ).length(); i++ ) {
+				dCmd = Decor.DeCmd.getDeCmd( m.group( 1 ).charAt( i ), onCmd );
+				if ( dCmd != null )
+					decors.add( new Decor( dCmd, m.start() - compensator, m.group( 4 ) ) );
+				else
+					log.severe( String.format( "[PrepareString] Invalid decoration command [%c] in line \"%s\"", m.group( 1 ).charAt( i ) ) );
 			}
-			
-			decors.add( new Decor( dCmd, m.start() - compensator, m.group( 4 ) ) );
-				
 			
 			// compensation offset for the DecoPair position
 			// it should be decreased for the length of previous match
@@ -718,6 +718,7 @@ class ParaLine {
 		pl.decors = decors;
 		
 		return pl;
+		
 	}
 	
 	/**
@@ -727,7 +728,7 @@ class ParaLine {
 	 * 
 	 * @return ParaLine with 0 length with cmd Command decoration in it
 	 */
-	public static ParaLine CreateCmdPLine( Command cmd ) {
+/*	public static ParaLine CreateCmdPLine( Command cmd ) {
 		
 		ParaLine pl = new ParaLine(0);
 		
@@ -735,11 +736,12 @@ class ParaLine {
 		
 		return pl;
 	}
-	
+*/	
 	@Override
 	public String toString() {
 		
-		return String.format( "\"%s\" decorated by %s", buff.toString(), decors.toString() );
+		return buff.toString() + 
+			   ( decors.size() > 0 ? String.format( " decorated by %s" , decors.toString() ) : "" ) ;
 	}
 	
 }

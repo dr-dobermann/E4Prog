@@ -11,6 +11,7 @@ package textformatter;
 
 
 import lombok.*;
+import lombok.extern.java.Log;
 
 import java.util.*;
 import java.util.regex.*;
@@ -18,7 +19,7 @@ import java.io.IOException;
 import java.nio.file.*;
 
 
-
+@Log
 public class TextFormatter {
 
 	private @Getter int width = 72;
@@ -32,7 +33,7 @@ public class TextFormatter {
 	private @Getter int[] margins = new int[] {0, 0};
 	private @Getter int indent = 3;
 	
-	private static int NoteID = 1;
+	private int NoteID = 1;
 	private int PageNum = 1;
 	
 	private int emptyLinesCount = 0;
@@ -48,9 +49,17 @@ public class TextFormatter {
 
 	final Pattern cmdName = Pattern.compile( "^\\?(\\b(size|align|par|margin|interval|feedlines|feed|newpage|left|header|pnum|pb|footnote|alias)\\b)?" );
 	
-	TextFormatter() {
+	private static TextFormatter stateKeeper = null;
+	
+	public static TextFormatter GetTextFormatter () {
 		
+		if ( stateKeeper == null )
+			stateKeeper = new TextFormatter();
+		
+		return stateKeeper;
 	}
+	
+	private TextFormatter() {}
 	
 	public void LoadDocument( String path ) {
 		
@@ -66,16 +75,6 @@ public class TextFormatter {
 					.sequential()
 					.map( l -> ReplaceAliases( l ) )
 					.map( l -> ProcessCmd( l ) )
-					//.filter( l -> l.matches( "^!CMD_\\w*" ) )
-					.map( l -> {
-							if ( l.matches( "^!CMD_\\w*" ) ) { 
-							   	  System.out.printf( "                 COMMAND %s\n", l);
-								  return null;
-							   }
-							   else
-								   return l;
-							}
-						)
 					.filter( l -> l != null )
 					.map( l -> ParaLine.PrepareString( l ) )
 					.forEach( line -> System.out.println( line.toString() ) );
@@ -85,7 +84,7 @@ public class TextFormatter {
 		}		
 	}
 	
-	public static int GetFnoteID () {
+	public int GetFnoteID () {
 		
 		return NoteID++;
 	}
@@ -103,10 +102,14 @@ public class TextFormatter {
 		
 		Matcher m = cmdName.matcher( str );
 		
-		if ( m.find() )
-			return String.format( "!CMD_%s", m.group(1).toUpperCase() );
+		if ( !m.find() )
+			return str;
 		
-		return str;
+		log.warning( String.format( "!CMD_%s", m.group(1).toUpperCase() ) ); // TODO: Change log level to config
+			
+			
+			
+		return null; 
 	}
 
 	/**
@@ -119,7 +122,7 @@ public class TextFormatter {
 	private String ReplaceAliases( String str ) {
 		
 		for ( String alias : aliases.keySet() )
-			str.replaceAll(alias, aliases.get(alias));
+			str.replaceAll( alias, aliases.get( alias ) );
 		
 		return str;
 	}
@@ -131,291 +134,413 @@ public class TextFormatter {
 	 *                   then all aliases will be deleted 
 	 * @param oldName -- old name for the alias
 	 */
-	public void SetAlias(String newName, String oldName) {
+	public void SetAlias( String newName, String oldName ) {
 		
 		if ( newName.length() == 0 ) {
 			aliases.clear();
+			log.warning( "Clear all aliases" );
+			
 			return;
 		}
 		
-		aliases.put(newName, oldName);
+		log.warning( String.format( "New alias [%s] for [%s]", newName, oldName ) );
+		aliases.put( newName, oldName );
 	}
 	
-}
-
-
-class SentenceGenerator {
-	
-	private ArrayList<ParaLine> result = new ArrayList<>();
-	StringBuilder currLine = new StringBuilder();
-	
-	private Map<String, String> aliases = new HashMap<String, String>();
-
-	private int fnoteLines = 0;
-	private Footnote fnote = null;
-	
-	private int emptyLines = 0;
-	
-	public SentenceGenerator() {
+	/**
+	 * Checks if there is controlling command in the begin of the line.
+	 * If the command exists, it cut and processed
+	 * 
+	 * @param str  -- string to check
+	 * 
+	 * @return string without controlling command
+	 * 
+	 * @throws TFException
+	 */
+	private String CheckAndExecCmd( String str, String cmd ) {
 		
-	}
-	
-	public ArrayList<ParaLine> getResult() {
-		return result;
-	}
-	
-	public void accumulate( String line ) {
-	
-
-		final Pattern cmdName = Pattern.compile( "^\\?(\\b(size|align|par|margin|interval|feedlines|feed|newpage|left|header|pnum|pb|footnote|alias)\\b)?" );
-		Matcher m = null;
-
-		Command cmd = null;
-
-		int lastLineID = result.size() - 1;
+		ArrayList<String> params = GetCmdParams( str, cmd );
+		int lines;
 		
-		line = ReplaceAliases( line );
-		
-		m = cmdName.matcher( line );
-		if ( m.find() ) {
-			
-			cmd = ParseCmd( line );
-			
-			if ( cmd.getCommand() == Command.CommandName.CMD_FOOTNOTE )
-				
-				fnoteLines = Integer.parseInt( cmd.getParams().get( "lines" ) );
-			
-			else {
-				
-				FlushBuffer();
-				
-				result.add( ParaLine.CreateCmdPLine( cmd ) );
-				
-				return;
-			}
-		}
-		
-		if ( line.trim().length() == 0 ) {
-			
-			FlushBuffer();
-			
-			emptyLines++;
-		}
-		else 
-			if ( emptyLines > 1 ) {
-				// if there are more than one empty lines, add paragraph break command
-				emptyLines = 0;
-				result.add( ParaLine.CreateCmdPLine( new Command( Command.CommandName.CMD_PB ) ) );
-			}
-		
-		ArrayList<String> lines = SplitLineOnPunctuation( line );
-		currLine.append( lines.get(0) );
-		lines.set( 0, currLine.toString() );
-		
-		
-		if ( fnoteLines > 0 ) {
-			for ( String str : lines )
-				AddFnoteLine( ParaLine.PrepareString( str ) );
-			
-			if ( --fnoteLines == 0 )
-				;
-		}
-		else {
-			
-		}
-	/*	
-		if ( seReason == SEReason.SER_STREAM_END )
-			return null;
-		
-		seReason = SEReason.SER_UNKNOWN;
-		
-		// if there is empty string were read before, 
-		// return it
-		if ( emptyLine ) {
-			emptyLine = false;
-			seReason = SEReason.SER_EMPTY_LINE;
-			return "";
-		}
-
-		StringBuilder sb = new StringBuilder( "" );
-
-		// if there is no need to look for a formal end of the sentence but just for the end of the line
-		if ( !getFullSentence && uSen.length() > 0 ) {
-			sb.append( uSen );
-			uSen.delete( 0, uSen.length() );
-			
-			return sb.toString();
-		}
-		
-		String str = ReadLine();
-		
-		while ( str != null ) {
-			
-			// if empty string is read and unfinished string is not empty,
-			// return unfinished sentence and fire emptyLine flag.
-			// if unfinished sentence is empty, return it
-			if ( str.trim().length() == 0 ) {
-				
-				if ( uSen.length() > 0 ) {
-					sb.append( uSen );
-					uSen.delete( 0, uSen.length() );
-					emptyLine = true;
-					seReason = SEReason.SER_EMPTY_LINE;
+		switch ( cmd ) {
+			case "size" :
+				params = GetCmdParams( str, "\\?size +(\\d+) +(\\d+)", "size", 2, false );
+				int w, h;
+				try {
+					w = Integer.parseInt( params[1] );
+					h = Integer.parseInt( params[2] );
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+						TFException( getID(),
+								     "Casting error for size command!!!");
 				}
 				
-				break;
-			}
-			
-			if ( getFullSentence ) {
-				
-				// Check on sentence end or command start.
-				// If sentence end is occurred, return substring with it and
-				// previous buffer. Rest of the string save as unfinished sentence
-				m = sentenceEnd.matcher( str );
-				if ( m.find() ) {
-					if ( uSen.length() > 0 ) {
-						sb.append( uSen );
-						uSen.delete( 0, uSen.length() );
-					}
-					sb.append( str.substring( 0, m.end() ) );
-					uSen.append( str.substring( m.end() ) );
-					seReason = SEReason.SER_PUNCT;
+					if ( h <= 0 || w <= 0 )
+						throw new
+							TFException( getID(), 
+									     "[CheckAndExecCmd] Invalid page size W x H [%d][%d]",
+									     w, h);
 					
-					break;
-				}
+					width = w;
+					if ( h != height || 
+						 w > GetLastPage().getWidth() ) {
+						
+						height = h;
+						AddPage();
+					}
+					else 
+						GetLastPage().SetWidth( w );
+
+					str = params[0];	
 				
-				// If command starts, and unfinished sentence is not empty, return it
-				m = cmdName.matcher(str);
-				if ( m.find() ) {
-					if ( uSen.length() > 0 ) {
-						sb.append(uSen);
-						uSen.delete(0, uSen.length());
-						uSen.append(str);
-						seReason = SEReason.SER_CMD;
+				break;
+				
+			case "align" : // align settings for the next paragraph
+				params = GetCmdParams(str, "\\?align +(\\w+)", "align", 1, false );
+				
+				switch ( params[1] ) {
+					case "as_is" :
+						align = Para.PAlign.PA_AS_IS;
+						getFullSentence = false;
 						break;
-					}	
+					case "left" :
+						align = Para.PAlign.PA_LEFT;
+						getFullSentence = true;
+						break;
+					case "center" :
+						align = Para.PAlign.PA_CENTER;
+						getFullSentence = true;
+						break;
+					case "right" :
+						align = Para.PAlign.PA_RIGHT;
+						getFullSentence = true;
+						break;
+					case "fill" :
+						align = Para.PAlign.PA_FILL;
+						getFullSentence = true;
+						break;
+					default :
+						throw new
+							TFException( getID(),
+										 "[CheckAndExecCmd] Invalid align parameter [%s]!!!",
+										 params[1] );
+					}
+				
+				GetLastPage().SetAlign( align );
+				
+				str = params[0];	
+				
+				break;
+				
+			case "par" :
+				params = GetCmdParams( str, "\\?par +(\\d+) +(\\d+) +(\\d+)", "par", 3, false );
+				int ind, sB, sA;
+				
+				try {
+					ind = Integer.parseInt( params[1] );
+					sB  = Integer.parseInt( params[2] );
+					sA  = Integer.parseInt( params[3] );
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for par command!!!");
+				}
+
+				if ( sB < 0 || sA < 0 )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid paragraphge settings -- indent:[%d], sB:[%d], sA:[%d]",
+								     ind, sB, sA );
+				indent = ind;
+				spaces[0] = sB;
+				spaces[1] = sA;
+				
+				GetLastPage().SetParaSettings( indent, spaces );
+					
+				str = params[0];	
+
+				break;
+				
+			case "margin" :
+				params = GetCmdParams( str, "\\?margin +(\\d+) +(\\d+)", "margin", 2, false );
+				int mL, mR;
+				try {
+					mL = Integer.parseInt( params[1] );
+					mR = Integer.parseInt( params[2] );
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for margin command!!!");
 				}
 				
-				// append the str to an unfinished sentence
-				// and read next line;
-					uSen.append(str);
-					str = ReadLine();
-			}
-			else {
-					sb.append(str);
-					seReason = SEReason.SER_EOL;
+				if ( mL < 0 || mR < 0 || mL + mR > width )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid margins mL[%d], mR[%d]",
+								     mL, mR );
+				margins[0] = mL;
+				margins[1] = mR;
+				
+				GetLastPage().SetMargins( margins );
+
+				str = params[0];	
+
+				break;
+				
+			case "interval" :
+				params = GetCmdParams( str, "\\?interval +(\\d+)", "interval", 1, false );
+				int intr;
+				try {
+					intr = Integer.parseInt( params[1] );
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for interval command!!!");
+				}
+				
+				if ( intr < 1 || intr > height )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid interval value [%d]",
+								     intr );
+				interval = intr;
+				
+				GetLastPage().SetInterval( interval );
+
+				str = params[0];	
+
+				break;
+				
+			case "feedlines" :  // feed lines into the end of the last paragraph
+							    // with intervals
+				params = GetCmdParams( str, "\\?feedlines +(\\d+)", "feedlines", 1, false );
+				try {
+					lines = Integer.parseInt(params[1]);					
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for feedlines command!!!");
+				}
+
+				if ( lines < 1 )
+					throw new
+						TFException( getID(),
+								     "[CheckAndExecCmd] Invalid number of lines for feedlines!!!" );
+				GetLastPage().FeedLines( lines, true );
+				
+				str = params[0];	
+
+				break;
+				
+			case "feed" :
+				params = GetCmdParams( str, "\\?feed +(\\d+)", "feed", 1, false );
+				try {
+					lines = Integer.parseInt(params[1]);
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for feed command!!!");
+				}
+
+				if ( lines < 1 )
+					throw new
+						TFException( getID(),
+								     "[CheckAndExecCmd] Invalid number of lines for feed!!!" );
+				GetLastPage().FeedLines( lines, false );
+				
+				str = params[0];	
+
+				break;
+				
+			case "newpage" :
+				AddPage();
+				str = str.substring( m.end() );	
+
+				break;
+				
+			case "left" :
+				params = GetCmdParams( str, "\\?left +(\\d+)", "left", 1, false );
+				try {
+					lines = Integer.parseInt(params[1]);
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for left command!!!");
+				}
+
+				if ( lines < 1 )
+					throw new
+						TFException( getID(),
+								     "[CheckAndExecCmd] Invalid number of lines for left command!!!" );
+				
+				if ( GetLastPage().getLinesLeft() <= lines )
+					AddPage();
+				
+				str = params[0];	
+
+				break;
+				
+			case "header" :
+				params = GetCmdParams( str, "\\?header +(\\d+) +(\\d+) +(\\w+)", "header", 3, false );
+				int hHeight, hLine;
+				try {
+					hHeight = Integer.parseInt( params[1] );
+					hLine   = Integer.parseInt( params[2] );
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for header command!!!");
+				}
+				
+				if ( hHeight < 0 || hHeight > height || hLine > hHeight )
+					throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid header height [%d]",
+								     hHeight );
+				switch ( params[3] ) {
+					case "left" : 
+						headerAlign = Para.PAlign.PA_LEFT;
+						break;
+						
+					case "right" :
+						headerAlign = Para.PAlign.PA_RIGHT;
+						break;
+						
+					case "center" :
+						headerAlign = Para.PAlign.PA_CENTER;
+						break;
+						
+					default : 
+						throw new
+						TFException( getID(), 
+								     "[CheckAndExecCmd] Invalid header alignment value [%s]",
+								     params[3] );
+				}
+				
+				headerHeight = hHeight;
+				headerLine = hHeight <= hLine ? hHeight - 1 : hLine;
+			
+				GetLastPage().SetHeader();
+
+				str = params[0];	
+
+				break;
+				
+			case "pnum" :
+				params = GetCmdParams( str, "\\?pnum +(\\d+)", "pnum", 1, false );
+				int pNum;
+				try {
+					pNum = Integer.parseInt(params[1]);
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for pnum command!!!");
+				}
+				if ( pNum < 1 )
+					throw new
+						TFException( getID(),
+								     "[CheckAndExecCmd] Invalid page number [%d]",
+								     pNum );
+				
+				lastPageNum = pNum;
+				GetLastPage().SetPageNum( pNum );
+				
+				str = params[0];	
+
+				break;
+				
+			case "pb" :
+				GetLastPage().AddNewPara();
+				
+				str = str.substring( m.end() );	
+
+				break;
+				
+			case "footnote" :
+				params = GetCmdParams( str, "\\?footnote +(\\d+)", "footnote", 1, false );
+				int fnNum;
+				try {
+					fnNum = Integer.parseInt(params[1]);
+				}
+				catch ( NumberFormatException e ) {
+					throw new
+					TFException( getID(),
+							     "Casting error for footnote command!!!");
+				}
+				
+				fnLines = fnNum;
+				fnLastReadCode = prevStrStatus;
+				
+				str = params[0];	
+
+				break;
+				
+			case "alias" :
+				String sNew, sOld;
+				
+				params = GetCmdParams( str, "\\?alias +(\\w+) *(\\w*) *$", "footnote", 2, true );
+				if ( params.length == 1 ) {
+					reader.SetAlias( "", "" );
+					str = str.substring( m.end() );
 					break;
 				}
+				else
+					if ( params.length == 2 || params[2].length() == 0 )
+						sOld = " ";
+					else
+						sOld = params[2];
+				
+					sNew = params[1];
+				
+				reader.SetAlias( sNew, sOld );
+					
+				str = params[0];
+				
+				break;				
 		}
-		
-		if ( str == null ) {
-			if ( uSen.length() > 0 ) {
-				sb.append(uSen);
-				uSen.delete(0, uSen.length());
-			}
-
-			seReason = SEReason.SER_STREAM_END;
-			return null;
-		}
-		
-		return sb.toString();	
-	 */
-	}
-	
-	public void combine( SentenceGenerator sg ) {
-		
-	}
-
-	private void FlushBuffer() {
-	
-		if ( currLine.length() > 0 ) {
-			
-			result.add( ParaLine.PrepareString( currLine.toString() ) );
-			currLine.delete( 0, currLine.length() );
-		}
-	}
-
-	private Command ParseCmd( String line ) {
-		
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	
-	/**
-	 * Replaces all aliases to their original values
-	 * 
-	 * @param str  -- string to process 
-	 * 
-	 * @return string with replaced aliases
-	 */
-	private String ReplaceAliases( String str ) {
-		
-		for ( String alias : aliases.keySet() )
-			str.replaceAll(alias, aliases.get(alias));
 		
 		return str;
 	}
-
-	/**
-	 * Adds new alias into aliases table or clears all aliases
-	 * 
-	 * @param newName -- new alias for oldName. If newName is empty, 
-	 *                   then all aliases will be deleted 
-	 * @param oldName -- old name for the alias
-	 */
-	public void SetAlias(String newName, String oldName) {
-		
-		if ( newName.length() == 0 ) {
-			aliases.clear();
-			return;
-		}
-		
-		aliases.put(newName, oldName);
-	}
 	
 	/**
-	 * Adds new ParaLine into footnote buffer
+	 * Looking for command parameters in the string
 	 * 
-	 * @param line -- line to add
+	 * @param str		-- checked string
+	 * @param cmd		-- command name for the error messages
+	 * @param paraNum	-- number of parameters
+	 * 
+	 * @return an string list with parameters.
+	 * 
+	 * @throws TFException
 	 */
-	private void AddFnoteLine( ParaLine line ) {
+	private ArrayList<String> GetCmdParams( String str, String cmd ) {
 		
-		if ( fnote == null )
-			fnote = new Footnote( TextFormatter.GetFnoteID() );
 		
-		fnote.AddLine( line );
-	}
-	
-	private ArrayList<String> SplitLineOnPunctuation( String str ) {
+		Matcher m = Pattern.compile( String.format( "\\\\?(\\\\b%s\\\\b){1} +(\\\\w+)?", cmd) ).matcher( str );
 		
-		ArrayList<String> lines = new ArrayList<>();
-		
-		final Pattern sentenceEnd = Pattern.compile( "\"\\?\"\\.(?!,)\\W*|" +					  // "?, ".  it excludes strings as ".,"	
-                "\\.\"\\)\\W*|\\?\"\\)\\W*|!\"\\)\\W*|" +    // ."), ?"), !") at the end of sentence 
-			     "\\.\\)\\W*|\\?\\)\\W*|!\\)\\W*|" +          // .),  ?)   !)
-			     "(!+\\?+)+\\W*|(\\?+!+)+\\W*|" +             // !?,  ?!
-				 "\\.+(?!,)\\W*|\\?+\\W*|!+\\W*" );           // ., ..., ?, !
-		
-		Matcher m;
-		
-		while ( str.length() > 0 ) {
+		if ( !m.find() ) {
+			log.severe( String.format( "Could not find command with parameters for command [%s] in the string \"%s\"",
+									  cmd, str ) );
 			
-			m = sentenceEnd.matcher( str );
-			if ( m.find() ) {
-				
-				lines.add( str.substring( 0, m.end() ) );
-				str = str.substring( m.end() );
-			}
-			else {
-				lines.add( str );
-				break;
-			}
+			return null;
 		}
+
+		ArrayList<String> params = new ArrayList<>();
+				
+		for ( int i = 1; i <= m.groupCount(); i++ )
+			params.add( m.group( i ) );
 		
-		return lines;
-	}
-	
+		return params;
+	}	
 }
 
 

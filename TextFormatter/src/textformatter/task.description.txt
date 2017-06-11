@@ -69,7 +69,7 @@ Every command starts at first position of input steam string from letter "?".
 
 
 
-&B+Command list:&B-
+&BU+Command list:&BU-
 ====================
 -----------------------------------------------------------------------------------
 name        | parameters (values) _ defaults _                         | closes the
@@ -137,15 +137,14 @@ Add alias for the symbol to mask it further
 &B+Decoration commands:&B-
 ===================
 ?align fill
-There are could be text decoration commands inside the paragraph.
+There are could be text decoration commands presented inside the paragraph.
 They look as &<command_name>+/-. 
-<command_name> could consists of a few commands combined
-?footnote 1
-Not realized yet. Now every decoration could consist only one command
-. For some commands it could be possible to provide additional information in 
+<command_name> could consists of a few commands combined. 
+For some commands it could be possible to provide additional information in 
 {} after the starting command.
 ?footnote 1
-Only realized for footnotes yet.
+Only used for footnotes yet.
+?align as_is
 ---------------------------------------------------------------------------
 code     |  description
 ---------------------------------------------------------------------------

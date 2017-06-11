@@ -15,21 +15,22 @@ public class TextFormatterTst {
 	
 	public static void main ( String[] args ) {
 		
-		TextFormatter txtFmt = new TextFormatter();
+		TextFormatter txtFmt = TextFormatter.GetTextFormatter();
 		
-		txtFmt.LoadDocument("C:\\wrk\\dev\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
+		txtFmt.LoadDocument("C:\\wrk\\development\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
 		
+		TestRegExp();
 		
 	}
 
 	private static void TestRegExp() {
-		String str = "?align condencedThis  is  a   test &B+string  with&B- some sentences in it ... Is this a last sentence? No!" +
+		String str = "?align condenced This  is  a   test &B+string  with&B- some sentences in it ... Is this a last sentence? No!" +
                 "(There might be more.) How long could it countinue??? What's &U+going&U- on?!!?!" +
                 "Could anybody expalain&F+{test} me&F- what happened here?!!!";
 	
 		//System.out.println("[" + str.matches("\\.?.+") + "]");
 	
-		Matcher m = Pattern.compile("^\\?(\\b(align|par|size)\\b)?").matcher(str);
+		Matcher m = Pattern.compile("^\\?(\\balign\\b)? ( ?\\w+)*").matcher( str );
 		
 		while ( m.find() ) {
 		
