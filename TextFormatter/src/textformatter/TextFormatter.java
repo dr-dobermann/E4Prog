@@ -49,6 +49,9 @@ public class TextFormatter {
 
 	final Pattern cmdName = Pattern.compile( "^\\?(\\b(size|align|par|margin|interval|feedlines|feed|newpage|left|header|pnum|pb|footnote|alias)\\b)?" );
 	
+	private @Getter boolean newPage = false;
+	
+	
 	private static TextFormatter stateKeeper = null;
 	
 	public static TextFormatter GetTextFormatter () {
@@ -88,29 +91,7 @@ public class TextFormatter {
 		
 		return NoteID++;
 	}
-	
-	/**
-	 * Check the string and if it consists of a command, process the command
-	 * and return null instead the string
-	 * 
-	 * @param str -- String to process
-	 * 
-	 * @return null if there is command in the string or string itself if there
-	 *         is no command in the string
-	 */
-	public String ProcessCmd( String str ) {
-		
-		Matcher m = cmdName.matcher( str );
-		
-		if ( !m.find() )
-			return str;
-		
-		log.warning( String.format( "!CMD_%s", m.group(1).toUpperCase() ) ); // TODO: Change log level to config
-			
-			
-			
-		return null; 
-	}
+
 
 	/**
 	 * Replaces all aliases to their original values
@@ -148,368 +129,376 @@ public class TextFormatter {
 	}
 	
 	/**
-	 * Checks if there is controlling command in the begin of the line.
-	 * If the command exists, it cut and processed
+	 * Check the string and if it consists of a command, process the command
+	 * and return null instead the string
 	 * 
-	 * @param str  -- string to check
+	 * @param str -- String to process
 	 * 
-	 * @return string without controlling command
-	 * 
-	 * @throws TFException
+	 * @return null if there is command in the string or string itself if there
+	 *         is no command in the string
 	 */
-	private String CheckAndExecCmd( String str, String cmd ) {
+	public String ProcessCmd( String str ) {
 		
-		ArrayList<String> params = GetCmdParams( str, cmd );
-		int lines;
+		Matcher m = cmdName.matcher( str );
+		String cmd = null;
 		
-		switch ( cmd ) {
-			case "size" :
-				params = GetCmdParams( str, "\\?size +(\\d+) +(\\d+)", "size", 2, false );
-				int w, h;
-				try {
-					w = Integer.parseInt( params[1] );
-					h = Integer.parseInt( params[2] );
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-						TFException( getID(),
-								     "Casting error for size command!!!");
-				}
-				
-					if ( h <= 0 || w <= 0 )
-						throw new
-							TFException( getID(), 
-									     "[CheckAndExecCmd] Invalid page size W x H [%d][%d]",
-									     w, h);
-					
-					width = w;
-					if ( h != height || 
-						 w > GetLastPage().getWidth() ) {
-						
-						height = h;
-						AddPage();
-					}
-					else 
-						GetLastPage().SetWidth( w );
-
-					str = params[0];	
-				
-				break;
-				
-			case "align" : // align settings for the next paragraph
-				params = GetCmdParams(str, "\\?align +(\\w+)", "align", 1, false );
-				
-				switch ( params[1] ) {
-					case "as_is" :
-						align = Para.PAlign.PA_AS_IS;
-						getFullSentence = false;
-						break;
-					case "left" :
-						align = Para.PAlign.PA_LEFT;
-						getFullSentence = true;
-						break;
-					case "center" :
-						align = Para.PAlign.PA_CENTER;
-						getFullSentence = true;
-						break;
-					case "right" :
-						align = Para.PAlign.PA_RIGHT;
-						getFullSentence = true;
-						break;
-					case "fill" :
-						align = Para.PAlign.PA_FILL;
-						getFullSentence = true;
-						break;
-					default :
-						throw new
-							TFException( getID(),
-										 "[CheckAndExecCmd] Invalid align parameter [%s]!!!",
-										 params[1] );
-					}
-				
-				GetLastPage().SetAlign( align );
-				
-				str = params[0];	
-				
-				break;
-				
-			case "par" :
-				params = GetCmdParams( str, "\\?par +(\\d+) +(\\d+) +(\\d+)", "par", 3, false );
-				int ind, sB, sA;
-				
-				try {
-					ind = Integer.parseInt( params[1] );
-					sB  = Integer.parseInt( params[2] );
-					sA  = Integer.parseInt( params[3] );
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for par command!!!");
-				}
-
-				if ( sB < 0 || sA < 0 )
-					throw new
-						TFException( getID(), 
-								     "[CheckAndExecCmd] Invalid paragraphge settings -- indent:[%d], sB:[%d], sA:[%d]",
-								     ind, sB, sA );
-				indent = ind;
-				spaces[0] = sB;
-				spaces[1] = sA;
-				
-				GetLastPage().SetParaSettings( indent, spaces );
-					
-				str = params[0];	
-
-				break;
-				
-			case "margin" :
-				params = GetCmdParams( str, "\\?margin +(\\d+) +(\\d+)", "margin", 2, false );
-				int mL, mR;
-				try {
-					mL = Integer.parseInt( params[1] );
-					mR = Integer.parseInt( params[2] );
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for margin command!!!");
-				}
-				
-				if ( mL < 0 || mR < 0 || mL + mR > width )
-					throw new
-						TFException( getID(), 
-								     "[CheckAndExecCmd] Invalid margins mL[%d], mR[%d]",
-								     mL, mR );
-				margins[0] = mL;
-				margins[1] = mR;
-				
-				GetLastPage().SetMargins( margins );
-
-				str = params[0];	
-
-				break;
-				
-			case "interval" :
-				params = GetCmdParams( str, "\\?interval +(\\d+)", "interval", 1, false );
-				int intr;
-				try {
-					intr = Integer.parseInt( params[1] );
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for interval command!!!");
-				}
-				
-				if ( intr < 1 || intr > height )
-					throw new
-						TFException( getID(), 
-								     "[CheckAndExecCmd] Invalid interval value [%d]",
-								     intr );
-				interval = intr;
-				
-				GetLastPage().SetInterval( interval );
-
-				str = params[0];	
-
-				break;
-				
-			case "feedlines" :  // feed lines into the end of the last paragraph
-							    // with intervals
-				params = GetCmdParams( str, "\\?feedlines +(\\d+)", "feedlines", 1, false );
-				try {
-					lines = Integer.parseInt(params[1]);					
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for feedlines command!!!");
-				}
-
-				if ( lines < 1 )
-					throw new
-						TFException( getID(),
-								     "[CheckAndExecCmd] Invalid number of lines for feedlines!!!" );
-				GetLastPage().FeedLines( lines, true );
-				
-				str = params[0];	
-
-				break;
-				
-			case "feed" :
-				params = GetCmdParams( str, "\\?feed +(\\d+)", "feed", 1, false );
-				try {
-					lines = Integer.parseInt(params[1]);
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for feed command!!!");
-				}
-
-				if ( lines < 1 )
-					throw new
-						TFException( getID(),
-								     "[CheckAndExecCmd] Invalid number of lines for feed!!!" );
-				GetLastPage().FeedLines( lines, false );
-				
-				str = params[0];	
-
-				break;
-				
-			case "newpage" :
-				AddPage();
-				str = str.substring( m.end() );	
-
-				break;
-				
-			case "left" :
-				params = GetCmdParams( str, "\\?left +(\\d+)", "left", 1, false );
-				try {
-					lines = Integer.parseInt(params[1]);
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for left command!!!");
-				}
-
-				if ( lines < 1 )
-					throw new
-						TFException( getID(),
-								     "[CheckAndExecCmd] Invalid number of lines for left command!!!" );
-				
-				if ( GetLastPage().getLinesLeft() <= lines )
-					AddPage();
-				
-				str = params[0];	
-
-				break;
-				
-			case "header" :
-				params = GetCmdParams( str, "\\?header +(\\d+) +(\\d+) +(\\w+)", "header", 3, false );
-				int hHeight, hLine;
-				try {
-					hHeight = Integer.parseInt( params[1] );
-					hLine   = Integer.parseInt( params[2] );
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for header command!!!");
-				}
-				
-				if ( hHeight < 0 || hHeight > height || hLine > hHeight )
-					throw new
-						TFException( getID(), 
-								     "[CheckAndExecCmd] Invalid header height [%d]",
-								     hHeight );
-				switch ( params[3] ) {
-					case "left" : 
-						headerAlign = Para.PAlign.PA_LEFT;
-						break;
-						
-					case "right" :
-						headerAlign = Para.PAlign.PA_RIGHT;
-						break;
-						
-					case "center" :
-						headerAlign = Para.PAlign.PA_CENTER;
-						break;
-						
-					default : 
-						throw new
-						TFException( getID(), 
-								     "[CheckAndExecCmd] Invalid header alignment value [%s]",
-								     params[3] );
-				}
-				
-				headerHeight = hHeight;
-				headerLine = hHeight <= hLine ? hHeight - 1 : hLine;
+		ArrayList<String> params;
+		
+		if ( !m.find() )
+			return str;
+		
+		cmd = m.group( 1 );
+		
+		log.warning( String.format( "!CMD_%s", cmd ) ); // TODO: Change log level to config
 			
-				GetLastPage().SetHeader();
-
-				str = params[0];	
-
-				break;
+		switch ( cmd ) {
+		case "size" :
+			params = GetCmdParams( str, "size", 2, new Class[] { Integer.class, Integer.class } );
+			int w, h;
+			try {
+				w = Integer.parseInt( params.get( 0 ) );
+				h = Integer.parseInt( params.get( 1 ) );
+			}
+			catch ( NumberFormatException e ) {
+				log.severe( "Invalid parameters for size command." );
+			}
+			
+			if ( h <= 0 || w <= 10 ) {
+				log.severe( String.format( "[CheckAndExecCmd] Invalid page size W x H [%d][%d]",
+								           w, h ) );
+				return null;
+			}
 				
-			case "pnum" :
-				params = GetCmdParams( str, "\\?pnum +(\\d+)", "pnum", 1, false );
-				int pNum;
-				try {
-					pNum = Integer.parseInt(params[1]);
-				}
-				catch ( NumberFormatException e ) {
-					throw new
-					TFException( getID(),
-							     "Casting error for pnum command!!!");
-				}
-				if ( pNum < 1 )
+			if ( h != height ||
+				 ( w != width && w > fnWidth ) ) {
+					
+				height = h;
+				width = w;
+				
+				newPage = true;
+			}
+			else 
+				if ( w < width )
+					width = w;
+			
+			break;
+			
+		case "align" : // align settings for the next paragraph
+			params = GetCmdParams(str, "\\?align +(\\w+)", "align", 1, false );
+			
+			switch ( params[1] ) {
+				case "as_is" :
+					align = Para.PAlign.PA_AS_IS;
+					getFullSentence = false;
+					break;
+				case "left" :
+					align = Para.PAlign.PA_LEFT;
+					getFullSentence = true;
+					break;
+				case "center" :
+					align = Para.PAlign.PA_CENTER;
+					getFullSentence = true;
+					break;
+				case "right" :
+					align = Para.PAlign.PA_RIGHT;
+					getFullSentence = true;
+					break;
+				case "fill" :
+					align = Para.PAlign.PA_FILL;
+					getFullSentence = true;
+					break;
+				default :
 					throw new
 						TFException( getID(),
-								     "[CheckAndExecCmd] Invalid page number [%d]",
-								     pNum );
-				
-				lastPageNum = pNum;
-				GetLastPage().SetPageNum( pNum );
-				
-				str = params[0];	
-
-				break;
-				
-			case "pb" :
-				GetLastPage().AddNewPara();
-				
-				str = str.substring( m.end() );	
-
-				break;
-				
-			case "footnote" :
-				params = GetCmdParams( str, "\\?footnote +(\\d+)", "footnote", 1, false );
-				int fnNum;
-				try {
-					fnNum = Integer.parseInt(params[1]);
+									 "[CheckAndExecCmd] Invalid align parameter [%s]!!!",
+									 params[1] );
 				}
-				catch ( NumberFormatException e ) {
-					throw new
+			
+			GetLastPage().SetAlign( align );
+			
+			str = params[0];	
+			
+			break;
+			
+		case "par" :
+			params = GetCmdParams( str, "\\?par +(\\d+) +(\\d+) +(\\d+)", "par", 3, false );
+			int ind, sB, sA;
+			
+			try {
+				ind = Integer.parseInt( params[1] );
+				sB  = Integer.parseInt( params[2] );
+				sA  = Integer.parseInt( params[3] );
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for par command!!!");
+			}
+
+			if ( sB < 0 || sA < 0 )
+				throw new
+					TFException( getID(), 
+							     "[CheckAndExecCmd] Invalid paragraphge settings -- indent:[%d], sB:[%d], sA:[%d]",
+							     ind, sB, sA );
+			indent = ind;
+			spaces[0] = sB;
+			spaces[1] = sA;
+			
+			GetLastPage().SetParaSettings( indent, spaces );
+				
+			str = params[0];	
+
+			break;
+			
+		case "margin" :
+			params = GetCmdParams( str, "\\?margin +(\\d+) +(\\d+)", "margin", 2, false );
+			int mL, mR;
+			try {
+				mL = Integer.parseInt( params[1] );
+				mR = Integer.parseInt( params[2] );
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for margin command!!!");
+			}
+			
+			if ( mL < 0 || mR < 0 || mL + mR > width )
+				throw new
+					TFException( getID(), 
+							     "[CheckAndExecCmd] Invalid margins mL[%d], mR[%d]",
+							     mL, mR );
+			margins[0] = mL;
+			margins[1] = mR;
+			
+			GetLastPage().SetMargins( margins );
+
+			str = params[0];	
+
+			break;
+			
+		case "interval" :
+			params = GetCmdParams( str, "\\?interval +(\\d+)", "interval", 1, false );
+			int intr;
+			try {
+				intr = Integer.parseInt( params[1] );
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for interval command!!!");
+			}
+			
+			if ( intr < 1 || intr > height )
+				throw new
+					TFException( getID(), 
+							     "[CheckAndExecCmd] Invalid interval value [%d]",
+							     intr );
+			interval = intr;
+			
+			GetLastPage().SetInterval( interval );
+
+			str = params[0];	
+
+			break;
+			
+		case "feedlines" :  // feed lines into the end of the last paragraph
+						    // with intervals
+			params = GetCmdParams( str, "\\?feedlines +(\\d+)", "feedlines", 1, false );
+			try {
+				lines = Integer.parseInt(params[1]);					
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for feedlines command!!!");
+			}
+
+			if ( lines < 1 )
+				throw new
 					TFException( getID(),
-							     "Casting error for footnote command!!!");
-				}
-				
-				fnLines = fnNum;
-				fnLastReadCode = prevStrStatus;
-				
-				str = params[0];	
+							     "[CheckAndExecCmd] Invalid number of lines for feedlines!!!" );
+			GetLastPage().FeedLines( lines, true );
+			
+			str = params[0];	
 
-				break;
-				
-			case "alias" :
-				String sNew, sOld;
-				
-				params = GetCmdParams( str, "\\?alias +(\\w+) *(\\w*) *$", "footnote", 2, true );
-				if ( params.length == 1 ) {
-					reader.SetAlias( "", "" );
-					str = str.substring( m.end() );
+			break;
+			
+		case "feed" :
+			params = GetCmdParams( str, "\\?feed +(\\d+)", "feed", 1, false );
+			try {
+				lines = Integer.parseInt(params[1]);
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for feed command!!!");
+			}
+
+			if ( lines < 1 )
+				throw new
+					TFException( getID(),
+							     "[CheckAndExecCmd] Invalid number of lines for feed!!!" );
+			GetLastPage().FeedLines( lines, false );
+			
+			str = params[0];	
+
+			break;
+			
+		case "newpage" :
+			AddPage();
+			str = str.substring( m.end() );	
+
+			break;
+			
+		case "left" :
+			params = GetCmdParams( str, "\\?left +(\\d+)", "left", 1, false );
+			try {
+				lines = Integer.parseInt(params[1]);
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for left command!!!");
+			}
+
+			if ( lines < 1 )
+				throw new
+					TFException( getID(),
+							     "[CheckAndExecCmd] Invalid number of lines for left command!!!" );
+			
+			if ( GetLastPage().getLinesLeft() <= lines )
+				AddPage();
+			
+			str = params[0];	
+
+			break;
+			
+		case "header" :
+			params = GetCmdParams( str, "\\?header +(\\d+) +(\\d+) +(\\w+)", "header", 3, false );
+			int hHeight, hLine;
+			try {
+				hHeight = Integer.parseInt( params[1] );
+				hLine   = Integer.parseInt( params[2] );
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for header command!!!");
+			}
+			
+			if ( hHeight < 0 || hHeight > height || hLine > hHeight )
+				throw new
+					TFException( getID(), 
+							     "[CheckAndExecCmd] Invalid header height [%d]",
+							     hHeight );
+			switch ( params[3] ) {
+				case "left" : 
+					headerAlign = Para.PAlign.PA_LEFT;
 					break;
-				}
-				else
-					if ( params.length == 2 || params[2].length() == 0 )
-						sOld = " ";
-					else
-						sOld = params[2];
-				
-					sNew = params[1];
-				
-				reader.SetAlias( sNew, sOld );
 					
-				str = params[0];
-				
-				break;				
-		}
+				case "right" :
+					headerAlign = Para.PAlign.PA_RIGHT;
+					break;
+					
+				case "center" :
+					headerAlign = Para.PAlign.PA_CENTER;
+					break;
+					
+				default : 
+					throw new
+					TFException( getID(), 
+							     "[CheckAndExecCmd] Invalid header alignment value [%s]",
+							     params[3] );
+			}
+			
+			headerHeight = hHeight;
+			headerLine = hHeight <= hLine ? hHeight - 1 : hLine;
 		
-		return str;
+			GetLastPage().SetHeader();
+
+			str = params[0];	
+
+			break;
+			
+		case "pnum" :
+			params = GetCmdParams( str, "\\?pnum +(\\d+)", "pnum", 1, false );
+			int pNum;
+			try {
+				pNum = Integer.parseInt(params[1]);
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for pnum command!!!");
+			}
+			if ( pNum < 1 )
+				throw new
+					TFException( getID(),
+							     "[CheckAndExecCmd] Invalid page number [%d]",
+							     pNum );
+			
+			lastPageNum = pNum;
+			GetLastPage().SetPageNum( pNum );
+			
+			str = params[0];	
+
+			break;
+			
+		case "pb" :
+			GetLastPage().AddNewPara();
+			
+			str = str.substring( m.end() );	
+
+			break;
+			
+		case "footnote" :
+			params = GetCmdParams( str, "\\?footnote +(\\d+)", "footnote", 1, false );
+			int fnNum;
+			try {
+				fnNum = Integer.parseInt(params[1]);
+			}
+			catch ( NumberFormatException e ) {
+				throw new
+				TFException( getID(),
+						     "Casting error for footnote command!!!");
+			}
+			
+			fnLines = fnNum;
+			fnLastReadCode = prevStrStatus;
+			
+			str = params[0];	
+
+			break;
+			
+		case "alias" :
+			String sNew, sOld;
+			
+			params = GetCmdParams( str, "\\?alias +(\\w+) *(\\w*) *$", "footnote", 2, true );
+			if ( params.length == 1 ) {
+				reader.SetAlias( "", "" );
+				str = str.substring( m.end() );
+				break;
+			}
+			else
+				if ( params.length == 2 || params[2].length() == 0 )
+					sOld = " ";
+				else
+					sOld = params[2];
+			
+				sNew = params[1];
+			
+			reader.SetAlias( sNew, sOld );
+				
+			str = params[0];
+			
+			break;				
 	}
+			
+			
+		return null; 
+	}
+
 	
 	/**
 	 * Looking for command parameters in the string
@@ -522,15 +511,21 @@ public class TextFormatter {
 	 * 
 	 * @throws TFException
 	 */
-	private ArrayList<String> GetCmdParams( String str, String cmd ) {
+	private ArrayList<String> GetCmdParams( String str, String cmd, int pNum, Class[] pTypes ) {
 		
+		StringBuilder pSrchStr = new StringBuilder( "\\\\?(\\\\b" ).append(cmd).append( "\\\\b){1}" );
 		
-		Matcher m = Pattern.compile( String.format( "\\\\?(\\\\b%s\\\\b){1} +(\\\\w+)?", cmd) ).matcher( str );
+		for ( int p = 0; p < pNum; p++ )
+			if ( pTypes[p] == Integer.class )
+				pSrchStr.append( " +(\\\\d+)" );
+			else
+				pSrchStr.append( " +(\\\\w+)" );
+		
+		Matcher m = Pattern.compile( pSrchStr.toString() ).matcher( str );
 		
 		if ( !m.find() ) {
 			log.severe( String.format( "Could not find command with parameters for command [%s] in the string \"%s\"",
 									  cmd, str ) );
-			
 			return null;
 		}
 
