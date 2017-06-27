@@ -15,6 +15,7 @@ import lombok.extern.java.Log;
 
 import java.util.*;
 import java.util.regex.*;
+import java.util.stream.Stream;
 import java.io.IOException;
 import java.nio.file.*;
 
@@ -41,7 +42,7 @@ public class TextFormatter {
 	private @Getter int headerHeight = 0;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
 	private @Getter int headerLine;
-	private List<String> header = null;
+	private List<ParaLine> header = null;
 	
 	private String path = null;
 	
@@ -53,8 +54,10 @@ public class TextFormatter {
 	
 	private @Getter boolean newPage = false;
 	private @Getter int linesToFeed = 0;
-	private @Getter int lastPageNum = 1;
 	private @Getter int fnLines = 0;
+	private @Getter boolean closeParagraph = false;
+	
+	private @Getter ParaLine currLine = null;
 	
 	private static TextFormatter stateKeeper = null;
 	
@@ -84,6 +87,7 @@ public class TextFormatter {
 					.map( l -> ProcessCmd( l ) )
 					.filter( l -> l != null )
 					.map( l -> ParaLine.PrepareString( l ) )
+					.flatMap( l -> FormatString( l ) )
 					.forEach( line -> System.out.println( line.toString() ) );
 			} catch ( IOException ex ) {
 				ex.printStackTrace();
@@ -91,6 +95,30 @@ public class TextFormatter {
 		}		
 	}
 	
+	/**
+	 * Formats strings:
+	 * 	- creates full sentences where it's suitable
+	 * 	- filling footnotes
+	 * 	- align strings according to settings align and current page width
+	 * 
+	 * @param pl -- incoming line
+	 * 
+	 * @return stream of formatted strings. Migth be empty 
+	 */
+	Stream<ParaLine> FormatString( ParaLine pl ) {
+		
+		ArrayList<ParaLine> lines = new ArrayList<>();
+		
+		lines.add( pl );
+		
+		return lines.stream();
+	}
+	
+	/**
+	 * Returns current footnote ID and increments it afterwards
+	 * 
+	 * @return current footnote ID
+	 */
 	public int GetFnoteID () {
 		
 		return NoteID++;
@@ -155,9 +183,10 @@ public class TextFormatter {
 		
 		cmd = m.group( 1 );
 		
-		log.warning( String.format( "!CMD_%s", cmd ) ); // TODO: Change log level to config
+		log.warning( String.format( "Got command [%s]", cmd ) ); // TODO: Change log level to config
 			
 		switch ( cmd ) {
+		
 		case "size" :
 			params = GetCmdParams( str, "size", new Class[] { Integer.class, Integer.class } );
 			int w, h;
@@ -172,7 +201,7 @@ public class TextFormatter {
 			}
 			
 			if ( h <= 0 || w <= 10 ) {
-				log.severe( String.format( "[CheckAndExecCmd] Invalid page size W x H [%d][%d]",
+				log.severe( String.format( "Invalid page size W x H [%d][%d]",
 								           w, h ) );
 				return null;
 			}
@@ -189,6 +218,8 @@ public class TextFormatter {
 				if ( w < fnWidth )
 					width = w;
 			
+			closeParagraph = true;
+			
 			break;
 			
 		case "align" : // align settings for the next paragraph
@@ -203,6 +234,8 @@ public class TextFormatter {
 				log.severe( String.format( "Invalid align [%s]!!!", params.get( 0 ) ) );
 				return null;
 			}
+			
+			closeParagraph = true;
 			
 			break;
 			
@@ -230,6 +263,8 @@ public class TextFormatter {
 			spaces[0] = sB;
 			spaces[1] = sA;
 			
+			closeParagraph = true;
+			
 			break;
 			
 		case "margin" :
@@ -251,6 +286,8 @@ public class TextFormatter {
 			margins[0] = mL;
 			margins[1] = mR;
 			
+			closeParagraph = true;
+			
 			break;
 			
 		case "interval" :
@@ -269,6 +306,8 @@ public class TextFormatter {
 				return null;
 			}
 			interval = intr;
+			
+			closeParagraph = true;
 			
 			break;
 			
@@ -289,6 +328,9 @@ public class TextFormatter {
 			}	
 
 			linesToFeed = lines * interval;
+
+			closeParagraph = true;
+			
 			break;
 			
 		case "feed" :
@@ -308,9 +350,11 @@ public class TextFormatter {
 			
 			linesToFeed = lines;
 
+			closeParagraph = true;
+			
 			break;
 			
-		case "newpage" :
+		case "newpage" :			
 			newPage = true;	
 
 			break;
@@ -385,13 +429,13 @@ public class TextFormatter {
 				return null;
 			}
 			
-			lastPageNum = pNum;
+			PageNum = pNum;
 			SetHeader();
 			
 			break;
 			
-		case "pb" :
-			ClosePara();
+		case "pb" :			
+			closeParagraph = true;
 			
 			break;
 			
@@ -418,7 +462,7 @@ public class TextFormatter {
 		case "alias" :
 			String sNew, sOld;
 			
-			params = GetCmdParams( str, "alias", new Class[] { String.class, String.class } );
+			params = GetCmdParams( str, "alias", new Class[0] );
 			if ( params == null ) {
 				SetAlias( "", "" );
 				break;
@@ -440,15 +484,69 @@ public class TextFormatter {
 		return null; 
 	}
 
-	
-	private void ClosePara() {
-		// TODO Auto-generated method stub
+	/**
+	 * Re-creates a page header if headerHeight is not zero
+	 */
+	private void SetHeader() {
 		
+		header.clear();
+
+		if ( headerHeight == 0 )
+			return;
+		
+		final String sNum = String.format( "- %d -", GetPageNum() );
+		
+		ParaLine pl;
+		
+		for ( int l = 0; l < headerHeight; l++ ) {
+			
+			if ( l == headerLine - 1 ) {
+				
+				pl = new ParaLine( width );
+				pl.AddString( sNum, new Decor[0] );
+				switch ( align ) {
+					case PA_LEFT :
+						pl.Pad( Para.PAlign.PA_RIGHT, ' ', width - pl.GetLength() );
+						break;
+						
+					case PA_RIGHT :
+						pl.Pad( Para.PAlign.PA_LEFT, ' ', width - pl.GetLength() );
+						break;
+						
+					default : 
+						pl.Pad( Para.PAlign.PA_CENTER, ' ', width - pl.GetLength() );
+						break;
+				}
+				
+			}
+			else
+				// add a double dashed string as the last line 
+				// of the header if there is space for it
+				if ( l == headerHeight - 1 && 
+				     headerHeight > 1 && 
+				     headerLine != headerHeight ) {
+					
+					pl = new ParaLine( width );
+					pl.Pad( Para.PAlign.PA_LEFT, '=', width );
+				}
+				else {
+					pl = new ParaLine( width );
+					pl.AddString( "  ", new Decor[0] );
+				}
+	
+			header.add( pl );
+		}
 	}
 
-	private void SetHeader() {
-		// TODO Auto-generated method stub
+
+	/**
+	 * Returns current page number and increment it afterwards
+	 * 
+	 * @return current page number
+	 */
+	private int GetPageNum() {
 		
+		return PageNum++;
 	}
 
 	/**
@@ -456,7 +554,8 @@ public class TextFormatter {
 	 * 
 	 * @param str		-- checked string
 	 * @param cmd		-- command name for the error messages
-	 * @param paraNum	-- number of parameters
+	 * @param pTypes    -- array with parameter types.
+	 *                     if it's empty then as many parameters will be returned as they are
 	 * 
 	 * @return an string list with parameters.
 	 * 
@@ -464,15 +563,32 @@ public class TextFormatter {
 	 */
 	private ArrayList<String> GetCmdParams( String str, String cmd, Class[] pTypes ) {
 		
-		StringBuilder pSrchStr = new StringBuilder( "^\\\\?(\\\\b" ).append(cmd).append( "\\\\b){1}" );
+		StringBuilder pSrchStr = new StringBuilder( "^\\?(\\b" ).append(cmd).append( "\\b){1}" );
+		ArrayList<String> params = new ArrayList<>();
 		
-		for ( int p = 0; p < pTypes.length; p++ )
-			if ( pTypes[p] == Integer.class )
-				pSrchStr.append( " +(\\\\d+)" );
-			else
-				pSrchStr.append( " +(\\\\w+)" );
-		
-		log.severe( pSrchStr.toString() );
+		if ( pTypes.length > 0 ) {
+			for ( int p = 0; p < pTypes.length; p++ )
+				if ( pTypes[p] == Integer.class )
+					pSrchStr.append( " +(\\d+)" );
+				else
+					pSrchStr.append( " +(\\w+)" );
+			
+			Matcher m = Pattern.compile( pSrchStr.toString() ).matcher( str );
+			
+			if ( !m.find() ) {
+				log.severe( String.format( "Could not find command with parameters for command [%s] in the string \"%s\"",
+										  cmd, str ) );
+				return null;
+			}
+	
+					
+			for ( int i = 2; i <= m.groupCount(); i++ )
+				params.add( m.group( i ) );
+			
+			log.config( String.format( "Got params %s for command [%s].", params, cmd ) ); // TODO: Change severity level to config
+			
+			return params;
+		}
 		
 		Matcher m = Pattern.compile( pSrchStr.toString() ).matcher( str );
 		
@@ -481,13 +597,7 @@ public class TextFormatter {
 									  cmd, str ) );
 			return null;
 		}
-
-		ArrayList<String> params = new ArrayList<>();
-				
-		for ( int i = 1; i <= m.groupCount(); i++ )
-			params.add( m.group( i ) );
 		
-		log.warning( String.format( "Got %s for command %s.", params, cmd ) ); // TODO: Change severity level to config
 		
 		return params;
 	}	

@@ -17,7 +17,7 @@ public class TextFormatterTst {
 		
 		TextFormatter txtFmt = TextFormatter.GetTextFormatter();
 		
-		txtFmt.LoadDocument("C:\\wrk\\dev\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
+		txtFmt.LoadDocument("C:\\wrk\\development\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
 		
 		TestRegExp();
 		
@@ -30,7 +30,7 @@ public class TextFormatterTst {
 	
 		//System.out.println("[" + str.matches("\\.?.+") + "]");
 	
-		Matcher m = Pattern.compile("^\\?(\\balign\\b)? ( ?\\w+)*").matcher( str );
+		Matcher m = Pattern.compile("^\\?(\\balign\\b){1} +(\\w+)").matcher( str );
 		
 		while ( m.find() ) {
 		
