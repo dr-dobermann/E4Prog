@@ -1,4 +1,4 @@
-?align as_is
+?align left
 &B+Task description:&B-
 ====================
 
@@ -15,9 +15,10 @@ It's necessary to create a visualization tool for presenting the results.
 Every command starts at first position of input steam string from letter "?".
 
 
-?align as_is
+?align left
 &B+Notes:&B-
 ===================
+?align as_is
 1. The task conditions were little bit changed from the original assignment 
 
   1.1. Alignment sets as as_is, left, right, centered and fill(proportional)
@@ -70,7 +71,6 @@ Every command starts at first position of input steam string from letter "?".
 
 
 &BU+Command list:&BU-
-====================
 -----------------------------------------------------------------------------------
 name        | parameters (values) _ defaults _                         | closes the
 description |                                                          | paragraph
@@ -129,7 +129,8 @@ footnote      nstrings                                                   no
 Adds a footnote to the page. Footnote is formed from the next nstrings. 
 A new footnote pops up the existed ones.
 If there is no place to put the whole footnote on the page, 
-the rest of it moves to the next page
+the rest of it moves to the next page.
+Footnotes ignores empty lines and counts only non-empty ones
 
 alias         new_name old_name                                          no
 Add alias for the symbol to mask it further
@@ -144,6 +145,7 @@ For some commands it could be possible to provide additional information in
 {} after the starting command.
 ?footnote 1
 Only used for footnotes yet.
+?alias ln pb
 ?align as_is
 ---------------------------------------------------------------------------
 code     |  description
@@ -153,4 +155,6 @@ I           italic
 U           underline
 X           top index
 x           bottom index
-
+?ln
+?alias lbreak pb
+?lbreak

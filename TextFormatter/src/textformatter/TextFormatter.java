@@ -42,7 +42,7 @@ public class TextFormatter {
 	private @Getter int headerHeight = 0;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
 	private @Getter int headerLine;
-	private List<ParaLine> header = null;
+	private ArrayList<ParaLine> header = new ArrayList<>();
 	
 	private String path = null;
 	
@@ -54,10 +54,14 @@ public class TextFormatter {
 	
 	private @Getter boolean newPage = false;
 	private @Getter int linesToFeed = 0;
-	private @Getter int fnLines = 0;
+	
+	private int fnLines = 0;
+	private ArrayList<ParaLine> footnotes = new ArrayList<>();
+	private ArrayList<ParaLine> nextPageFNotes = new ArrayList<>();
+	
 	private @Getter boolean closeParagraph = false;
 	
-	private @Getter ParaLine currLine = null;
+	private @Getter ParaLine currLine = new ParaLine( 0 );
 	
 	private static TextFormatter stateKeeper = null;
 	
@@ -109,7 +113,33 @@ public class TextFormatter {
 		
 		ArrayList<ParaLine> lines = new ArrayList<>();
 		
-		lines.add( pl );
+		//remove empty lines
+		if ( align != Para.PAlign.PA_AS_IS &&
+			 pl.GetLength() == 0 ) {
+				if ( ++emptyLinesCount > 1 )
+					closeParagraph = true;
+				
+				return lines.stream();
+		}
+		
+		
+		if ( closeParagraph ) {
+			if ( currLine.GetLength() > 0 ) {
+				lines.add( currLine );
+				currLine.Clear();
+			}
+			closeParagraph = false;
+		}
+		
+					
+		if ( align != Para.PAlign.PA_AS_IS ) {
+			
+			pl.Trim( ParaLine.TrimSide.TS_BOTH );
+			
+			lines.add( pl );
+		}
+		else 
+			lines.add( pl );
 		
 		return lines.stream();
 	}
@@ -134,8 +164,9 @@ public class TextFormatter {
 	 */
 	private String ReplaceAliases( String str ) {
 		
-		for ( String alias : aliases.keySet() )
-			str.replaceAll( alias, aliases.get( alias ) );
+		for ( String alias : aliases.keySet() ) {
+			str = str.replaceAll( alias, aliases.get( alias ) );
+		}
 		
 		return str;
 	}
@@ -143,21 +174,48 @@ public class TextFormatter {
 	/**
 	 * Adds new alias into aliases table or clears all aliases
 	 * 
-	 * @param newName -- new alias for oldName. If newName is empty, 
-	 *                   then all aliases will be deleted 
+	 * @param newName -- new alias for oldName. 
+	 *                   if newName is empty, 
+	 *                      then all aliases will be deleted
+	 *                   if there is an alias with the same name already exists, 
+	 *                      the error is logged and a new alias is ignored
+	 *                   if there is alias for oldName already exists,
+	 *                      the old one removed and new one saved
+	 *                       
 	 * @param oldName -- old name for the alias
 	 */
 	public void SetAlias( String newName, String oldName ) {
 		
 		if ( newName.length() == 0 ) {
+			
 			aliases.clear();
-			log.warning( "Clear all aliases" );
+			log.info( "Clear all aliases" );
 			
 			return;
 		}
 		
-		log.warning( String.format( "New alias [%s] for [%s]", newName, oldName ) );
-		aliases.put( newName, oldName );
+		if ( aliases.containsKey( newName ) ) {
+		
+			log.warning( String.format( "Alias [%s] already exists!!!", newName ) );
+			return;
+		}
+		
+		for ( String key : aliases.keySet() )
+			if ( aliases.get( key ) == oldName ) {
+				
+				log.info( String.format( "Alias [%s] for [%s] will be replaced for [%s]",
+						                 key, oldName, newName ) );
+				aliases.remove( key );
+			}
+		
+
+		if ( newName != oldName ) {
+
+			aliases.put( newName, oldName );
+			log.info( String.format( "New alias [%s] for [%s]", newName, oldName ) );
+		}
+		else 
+			log.info( "Alias is equivalent to the value. Ignored." );
 	}
 	
 	/**
@@ -463,7 +521,7 @@ public class TextFormatter {
 			String sNew, sOld;
 			
 			params = GetCmdParams( str, "alias", new Class[0] );
-			if ( params == null ) {
+			if ( params.size() == 0 ) {
 				SetAlias( "", "" );
 				break;
 			}
@@ -536,6 +594,7 @@ public class TextFormatter {
 	
 			header.add( pl );
 		}
+		
 	}
 
 
@@ -567,6 +626,7 @@ public class TextFormatter {
 		ArrayList<String> params = new ArrayList<>();
 		
 		if ( pTypes.length > 0 ) {
+			
 			for ( int p = 0; p < pTypes.length; p++ )
 				if ( pTypes[p] == Integer.class )
 					pSrchStr.append( " +(\\d+)" );
@@ -585,7 +645,7 @@ public class TextFormatter {
 			for ( int i = 2; i <= m.groupCount(); i++ )
 				params.add( m.group( i ) );
 			
-			log.config( String.format( "Got params %s for command [%s].", params, cmd ) ); // TODO: Change severity level to config
+			log.info( String.format( "Got parameters %s for command [%s].", params, cmd ) );
 			
 			return params;
 		}
@@ -593,11 +653,16 @@ public class TextFormatter {
 		Matcher m = Pattern.compile( pSrchStr.toString() ).matcher( str );
 		
 		if ( !m.find() ) {
-			log.severe( String.format( "Could not find command with parameters for command [%s] in the string \"%s\"",
+			log.severe( String.format( "Could not find command [%s] in the string \"%s\"",
 									  cmd, str ) );
 			return null;
 		}
 		
+		for ( String s : str.substring( m.end() ).split( "\\W+") )
+			if ( s.length() > 0 )
+				params.add( s );
+		
+		log.info( String.format( "Got parameters %s for command [%s].", params, cmd ) );
 		
 		return params;
 	}	

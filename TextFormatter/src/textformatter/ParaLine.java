@@ -743,6 +743,18 @@ class ParaLine {
 		return buff.toString() + 
 			   ( decors.size() > 0 ? String.format( " decorated by %s" , decors.toString() ) : "" ) ;
 	}
+
+	/**
+	 * Clears ParaLine
+	 * 
+	 */
+	public void Clear() {
+		
+		decors.clear();
+		buff.delete( 0, buff.length() );
+		
+		width = 0;
+	}
 	
 }
 //-----------------------------------------------------------------------------
