@@ -56,6 +56,9 @@ public class TextFormatter {
 	private @Getter int linesToFeed = 0;
 	
 	private int fnLines = 0;
+	private ArrayList<ParaLine> currFNote = new ArrayList<>();
+	
+	// footnotes on the bottom of the current and next pages
 	private ArrayList<ParaLine> footnotes = new ArrayList<>();
 	private ArrayList<ParaLine> nextPageFNotes = new ArrayList<>();
 	
@@ -91,7 +94,7 @@ public class TextFormatter {
 					.map( l -> ProcessCmd( l ) )
 					.filter( l -> l != null )
 					.map( l -> ParaLine.PrepareString( l ) )
-					.flatMap( l -> FormatString( l ) )
+					.flatMap( l -> ProcessLine( l ) )
 					.forEach( line -> System.out.println( line.toString() ) );
 			} catch ( IOException ex ) {
 				ex.printStackTrace();
@@ -100,28 +103,39 @@ public class TextFormatter {
 	}
 	
 	/**
-	 * Formats strings:
+	 * Processes lines:
 	 * 	- creates full sentences where it's suitable
 	 * 	- filling footnotes
 	 * 	- align strings according to settings align and current page width
 	 * 
 	 * @param pl -- incoming line
 	 * 
-	 * @return stream of formatted strings. Migth be empty 
+	 * @return stream of formatted strings. Might be empty 
 	 */
-	Stream<ParaLine> FormatString( ParaLine pl ) {
+	Stream<ParaLine> ProcessLine( ParaLine pl ) {
 		
 		ArrayList<ParaLine> lines = new ArrayList<>();
 		
 		//remove empty lines
 		if ( align != Para.PAlign.PA_AS_IS &&
-			 pl.GetLength() == 0 ) {
-				if ( ++emptyLinesCount > 1 )
-					closeParagraph = true;
 				
-				return lines.stream();
+			pl.GetLength() == 0 ) {
+			if ( ++emptyLinesCount > 1 )
+				closeParagraph = true;
+				
+			return lines.stream();
 		}
 		
+		if ( fnLines > 0 ) {
+			
+			AddFootnoteLine( pl );
+			
+			fnLines--;
+			if ( fnLines == 0 )
+				footnotes.clear();
+			
+			return lines.stream();
+		}
 		
 		if ( closeParagraph ) {
 			if ( currLine.GetLength() > 0 ) {
@@ -152,6 +166,25 @@ public class TextFormatter {
 	public int GetFnoteID () {
 		
 		return NoteID++;
+	}
+
+	/**
+	 * Adds a line to the current footnote.
+	 * Every line will be cut and aligned according
+	 * to the footnote width.
+	 * 
+	 * It counts lines on page and if it's not fit the space left,
+	 * it removes extra lines to nextPageNotes
+	 * 
+	 * if all footnotes lines are consumed the footnote decoration added
+	 * to the current line buffer.
+	 * 
+	 * @param pl
+	 */
+	private void AddFootnoteLine( ParaLine pl ) {
+		
+		if ( )
+		
 	}
 
 
