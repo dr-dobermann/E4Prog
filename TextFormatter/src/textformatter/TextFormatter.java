@@ -12,10 +12,14 @@ package textformatter;
 
 import lombok.*;
 import lombok.extern.java.Log;
+import textformatter.Para.PAlign;
 
 import java.util.*;
 import java.util.regex.*;
 import java.util.stream.Stream;
+
+import javax.jws.soap.SOAPBinding.ParameterStyle;
+
 import java.io.IOException;
 import java.nio.file.*;
 
@@ -33,8 +37,8 @@ public class TextFormatter {
 	private @Getter int[] spaces = new int[] {0, 0};
 	private @Getter int[] margins = new int[] {0, 0};
 	private @Getter int indent = 3;
+	private boolean firsLineInPara = true;
 	
-	private int NoteID = 1;
 	private int PageNum = 1;
 	
 	private int emptyLinesCount = 0;
@@ -55,6 +59,9 @@ public class TextFormatter {
 	private @Getter boolean newPage = false;
 	private @Getter int linesToFeed = 0;
 	
+	private int fNoteID = 1;
+	private static final String fNoteFmt = "%3d) "; // TODO: Set different formats for a footnote identification
+	private static final int fNoteFmtLen = String.format( fNoteFmt, 1 ).length();
 	private int fnLines = 0;
 	private ArrayList<ParaLine> currFNote = new ArrayList<>();
 	
@@ -116,41 +123,73 @@ public class TextFormatter {
 		
 		ArrayList<ParaLine> lines = new ArrayList<>();
 		
-		//remove empty lines
-		if ( align != Para.PAlign.PA_AS_IS &&
+		//remove empty lines if alignment isn't set to PA_AS_IS
+		if ( pl.GetLength() == 0 ) {
+			if ( align != Para.PAlign.PA_AS_IS ) {
+				if ( ++emptyLinesCount > 1 ) // if there is more than 1 empty lines in a row, close the paragraph
+					closeParagraph = true;
+				else  {						 // if there is first empty line, close current sentence
+					if ( currLine.GetLength() > 0 )
+						lines.add( currLine );
+					currLine.Clear();
+				}
 				
-			pl.GetLength() == 0 ) {
-			if ( ++emptyLinesCount > 1 )
-				closeParagraph = true;
-				
-			return lines.stream();
+				return lines.stream();
+			}
+			else { 
+					lines.add( pl );
+					return lines.stream();
+				}
 		}
+		else
+			emptyLinesCount = 0;
 		
+		//check if there is open footnote exists
 		if ( fnLines > 0 ) {
+			
+			// TODO: current line should be not longer than the current paragraph width
+			// it will let to put the line with footnote link after the footnote closing
 			
 			AddFootnoteLine( pl );
 			
-			fnLines--;
-			if ( fnLines == 0 )
-				footnotes.clear();
+			if ( --fnLines == 0 )
+				CloseFootnote();
 			
 			return lines.stream();
 		}
 		
 		if ( closeParagraph ) {
+						
 			if ( currLine.GetLength() > 0 ) {
-				lines.add( currLine );
-				currLine.Clear();
+				
+				// process first line of paragraph
+				lines.add( currLine.CutFormattedLine( align, width - margins[0] - margins[1] - indent ) );
+				// process followed lines
+				if ( currLine.GetLength() > 0 )
+					lines.addAll( currLine.Split( align, width - margins[0] - margins[1], linesLeft ) );
+				
+				AddMarginsTo( lines, indent, margins );
 			}
+			
+			// add spaces after the current paragraph
+			AddEmptyLines( spaces[1] );
+			
+			// TODO: adding spaces before a new paragraph
+			// should be made before the new line put on page
+			// AddEmptyLines( spaces[0] );
+			
 			closeParagraph = false;
 		}
-		
 					
 		if ( align != Para.PAlign.PA_AS_IS ) {
 			
 			pl.Trim( ParaLine.TrimSide.TS_BOTH );
+			currLine.AddPline( ParaLine.PrepareString(" ") );
+			currLine.AddPline( pl );
 			
-			lines.add( pl );
+			while ( --linesLeft > 0 && currLine.GetLength() > width )
+				lines.add( currLine.CutFormattedLine( align, width ) );
+			
 		}
 		else 
 			lines.add( pl );
@@ -159,13 +198,33 @@ public class TextFormatter {
 	}
 	
 	/**
+	 * @param lines
+	 */
+	private void AddMarginsTo( ArrayList<ParaLine> lines, int indent, int margins[] ) {
+		
+		for ( int l = 0; l < lines.size(); l++ ) {
+			lines.get( l ).Pad( PAlign.PA_LEFT, ' ', margins[0] + ( l == 0 ? indent : 0 ) );
+			lines.get( l ).Pad( PAlign.PA_RIGHT, ' ', margins[1] );
+		}
+	}
+
+	/**
+	 * Adds empty lines to
+	 * @param i
+	 */
+	private void AddEmptyLines(int i) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/**
 	 * Returns current footnote ID and increments it afterwards
 	 * 
 	 * @return current footnote ID
 	 */
 	public int GetFnoteID () {
 		
-		return NoteID++;
+		return fNoteID++;
 	}
 
 	/**
@@ -173,20 +232,93 @@ public class TextFormatter {
 	 * Every line will be cut and aligned according
 	 * to the footnote width.
 	 * 
-	 * It counts lines on page and if it's not fit the space left,
-	 * it removes extra lines to nextPageNotes
-	 * 
-	 * if all footnotes lines are consumed the footnote decoration added
-	 * to the current line buffer.
-	 * 
 	 * @param pl
 	 */
 	private void AddFootnoteLine( ParaLine pl ) {
 		
-		if ( )
+		ParaLine noteID;
+		// First line should be exposed by a footnote index with 
+		// negative indent
+		if ( currFNote.size() == 0 )
+			noteID = new ParaLine( String.format( fNoteFmt, fNoteID ) ) ;
+		else
+			noteID = new ParaLine( String.format( "%5s", " ") ); // TODO: should be replaced when footnote format changed
+	
+		// Add pl to the last line in a current footnote buffer.
+		if ( currFNote.size() > 0 &&
+			 currFNote.get( currFNote.size() - 1 ).GetLength() < fnWidth ) {
+			pl = currFNote.get( currFNote.size() - 1 ).AddPline( pl );
+			currFNote.remove( currFNote.size() - 1 );
+		}
 		
+		// if the line is greater than the given width, cut the rest to the next buffer line
+		// and align the current line as defined. 
+		// add footnote index prefix and save it to the buffer
+		currFNote.add( noteID
+				        .AddPline( pl.CutFormattedLine( Para.PAlign.PA_FILL, fnWidth - noteID.GetLength() ) ) );
+		
+		if ( pl.GetLength() > fnWidth )
+			currFNote.addAll( pl.Split( PAlign.PA_FILL, fnWidth - noteID.GetLength(), -1 ) );
+		else
+			currFNote.add( pl );		
 	}
 
+	/**
+	 * Closes current footnote
+	 * 
+	 * Flushes the current footnote buffer into a page footnote buffer
+	 */
+	private void CloseFootnote() {
+
+		Footnote fnote = new Footnote( GetFnoteID() );
+		
+		AddMarginsTo( currFNote, -fNoteFmtLen, new int[] {5, 0} );
+		
+		for ( ParaLine pl : currFNote ) {
+			fnote.AddLine( pl );
+			log.info( String.format( "Footnote line [%s]", pl.toString() ) );
+		}
+
+		// add footnote decoration to the last text line
+		currLine.InsertDecor( Decor.DeCmd.DCS_FNOTE, currLine.GetLength(), fnote );
+		log.info( currLine.toString() );
+		
+		// add footnote lines to the current page
+		// if it's the first footnote, the separator should be added first
+		if ( footnotes.size() == 0 && linesLeft >= 3 ) {  // one line for the line with footnote link
+														  // one or zero line for the footnote header
+													      // one line for footnote itself
+			ParaLine pl = new ParaLine( fnWidth );
+			pl.Pad( PAlign.PA_LEFT, '-', fnWidth );
+			footnotes.add( pl );
+			linesLeft--;
+		}
+		
+		// if there are not enough lines to fit a line with footnote link and footnote itself
+		// new page should be started
+		if ( linesLeft < 2 ) 
+			newPage = true;
+		else
+			// add to the page footnote as many lines as possible
+			while ( currFNote.size() > 0 ) {  // one line for the line with footnote link
+				                              // one line for the footnote itself
+				footnotes.add( currFNote.get( 0 ) );
+				currFNote.remove( 0 );
+				linesLeft--;
+			}
+		
+		// add the rest of lines to the next page footnotes
+		while ( currFNote.size() > 0 ) {
+			if ( nextPageFNotes.size() == 0 ) {
+				ParaLine pl = new ParaLine( fnWidth );
+				pl.Pad( PAlign.PA_LEFT, '-', fnWidth );
+				nextPageFNotes.add( pl );
+			}
+			nextPageFNotes.add( currFNote.get( 0 ) );
+			currFNote.remove( 0 );
+		}
+	
+	}
 
 	/**
 	 * Replaces all aliases to their original values

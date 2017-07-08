@@ -14,12 +14,14 @@ import java.util.regex.*;
 public class TextFormatterTst {
 	
 	public static void main ( String[] args ) {
-		
+
 		TextFormatter txtFmt = TextFormatter.GetTextFormatter();
 		
-		txtFmt.LoadDocument("C:\\wrk\\dev\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
+		txtFmt.LoadDocument("C:\\wrk\\development\\java\\Etudes4Programmers\\TextFormatter\\src\\textformatter\\task.description.txt" );
 		
-		//TestRegExp();
+		// TestRegExp();
+		
+
 		
 	}
 
@@ -30,14 +32,16 @@ public class TextFormatterTst {
 	
 		//System.out.println("[" + str.matches("\\.?.+") + "]");
 	
-		Matcher m = Pattern.compile("^\\?(\\balign\\b){1} +(\\w+)").matcher( str );
+//		Matcher m = Pattern.compile("^\\?(\\balign\\b){1} +(\\w+)").matcher( str );
+		Matcher m = Pattern.compile("\\W+").matcher( str );
 		
 		while ( m.find() ) {
 		
-			System.out.println(str.substring(m.start(), m.end()) + " ");
+			System.out.println("[" + str.substring(m.start(), m.end()) + "]");
 			
-			for ( int i = 1; i <= m.groupCount(); i++ )
+			for ( int i = 1; i <= m.groupCount(); i++ ) {
 				System.out.printf("Group #%d is %s at %d\n", i, m.group(i), m.start(i));
+			}
 		}
 	}
 

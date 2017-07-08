@@ -16,6 +16,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import lombok.*;
+import textformatter.Para.PAlign;
 
 /**
  * Consists of information about decoration command
@@ -262,6 +263,14 @@ class ParaLine {
 		buff = new StringBuilder( this.width );
 	}
 	
+	public ParaLine( String str ) {
+
+		width = str.length();
+		
+		buff = new StringBuilder ( width );
+		buff.append( str );
+	}
+
 	/**
 	 * Sets new content of the ParaLine
 	 * Erases old content and deletes old decorations
@@ -290,9 +299,10 @@ class ParaLine {
 			log.severe( String.format( "[ShiftDecors] Shift point [%d] is out of line bounds!!!", after ) );
 			return;
 		}
-		for ( Decor dec : decors )
-			if ( dec.getPos() >= after )
-				dec.ShiftPos(shift);
+		if ( decors != null )
+			for ( Decor dec : decors )
+				if ( dec.getPos() >= after )
+					dec.ShiftPos( shift );
 	}
 	
 	/**
@@ -352,15 +362,31 @@ class ParaLine {
 		}
 		
 		pl.buff.append(buff.substring(0, length));
+
+		if ( decors != null ) {
+			
+			ArrayList<Decor> newDecors = new ArrayList<>();
+
+			for ( Decor d : decors )
+				if ( d.getPos() < length ) 
+					pl.InsertDecor( d.getCmd(), d.getPos(), d.getData() );
+				else
+					newDecors.add( new Decor( d.getCmd(), d.getPos() - length, d.getData() ) ); 
 		
-		decors.stream()
-			.filter( d -> d.getPos() < length )
-			.forEach( d -> {
-				pl.InsertDecor( d.getCmd(), d.getPos(), d.getData() );
-				decors.remove( d );
-			});
+			decors.clear();
+
+			decors.addAll( newDecors );
+		}
 		
-		ShiftDecors( 0, -length );
+					
+//		if ( decors != null)
+//			decors.stream()
+//				.filter( d -> d.getPos() < length )
+//				.forEach( d -> {
+//					pl.InsertDecor( d.getCmd(), d.getPos(), d.getData() );
+//					decors.remove( d );
+//				});
+		
 		buff.delete( 0, length );
 		
 		return pl;
@@ -476,6 +502,7 @@ class ParaLine {
 	
 	/**
 	 * Trims extra spaces from begin, end or both sides of the ParaLine
+	 * 
 	 * @param side  -- Select side for trimming @see textformatter.ParaLine.TrimSide  
 	 */
 	public void Trim( ParaLine.TrimSide side ) {
@@ -546,9 +573,14 @@ class ParaLine {
 		
 		
 		buff.append( pl.buff );
-		decors.addAll( pl.decors.stream()
-								 .map( d -> d.SetLine( this, d.getPos() + shift ) )
-								 .collect( Collectors.toList() ) );
+
+//		for ( Decor d : pl.decors )
+//			decors.add( new Decor( d.getCmd(), d.getPos() + shift, d.getData() ) );
+
+		if ( decors != null )
+			decors.addAll( pl.decors.stream()
+									 .map( d -> d.SetLine( this, d.getPos() + shift ) )
+									 .collect( Collectors.toList() ) );
 				
 		return this;
 	}
@@ -564,6 +596,9 @@ class ParaLine {
 		
 		if ( pos > buff.length() )
 			pos = buff.length();
+		
+		if ( decors == null )
+			decors = new ArrayList<Decor>();
 		
 		decors.add( new Decor( this, dec, pos, data ) );
 		
@@ -740,8 +775,10 @@ class ParaLine {
 	@Override
 	public String toString() {
 		
-		return buff.toString() + 
-			   ( decors.size() > 0 ? String.format( " decorated by %s" , decors.toString() ) : "" ) ;
+		return "{" + 
+		           buff.toString() +
+		       "}" +
+			   	( decors != null && decors.size() > 0 ? String.format( " decorated by %s" , decors.toString() ) : "" ) ;
 	}
 
 	/**
@@ -750,10 +787,162 @@ class ParaLine {
 	 */
 	public void Clear() {
 		
-		decors.clear();
+		if ( decors != null )
+			decors.clear();
+		
 		buff.delete( 0, buff.length() );
 		
 		width = 0;
+	}
+
+	/**
+	 * Cuts the line of defined length len from the beginning of the ParaLine, 
+	 * aligns it according to the paFill and return it.
+	 * The length of the cutted string based on last space delimiter in position
+	 * less than len. 
+	 * If the len is bigger or equal to the ParaLine length, the whole line
+	 * would be returned AS IS without alignment
+	 * 
+	 * @param paFill -- alignment of the returned line
+	 * @param len    -- length of the returned line
+	 * 
+	 * @return new ParaLine of length len aligned according to paFill
+	 */
+	public ParaLine CutFormattedLine( PAlign paFill, int len ) {
+		
+		ParaLine pl = new ParaLine( 0 );
+		
+		if ( len > buff.length() )
+			return pl.AddPline( this.CutHead( buff.length() ) );
+		
+		// look for the maximum delimiter position in the buffer
+		// limited by len
+		int maxDelPos = 0;
+		Matcher m = Pattern.compile( "\\W+" ).matcher( buff.substring( 0, len ) );
+		while ( m.find() ) 
+			maxDelPos = m.start();
+		
+		// if there is no delimiters in the given len, it just cut the line and
+		// return it non-aligned
+		if ( maxDelPos == 0 ) 
+			return pl.AddPline( this.CutHead( len ) );
+		
+		pl.AddPline( this.CutHead( maxDelPos ) );
+		
+		pl.Align( paFill, len );
+		
+		return pl;
+	}
+
+	/**
+	 * Aligns the line according to the paFill 
+	 * 
+	 * @param paFill -- alignment type
+	 * @param len    -- length of the resulted string
+	 * 
+	 */
+	private void Align( PAlign align, int len ) {
+		
+		if ( align == Para.PAlign.PA_AS_IS )
+			return;
+		
+		// remove leading or trailing spaces for every line
+		this.Trim(ParaLine.TrimSide.TS_BOTH);
+	
+		int fillSpace = len - buff.length();
+		if ( fillSpace <= 0 )
+			return;
+				
+		switch ( align ) {
+		
+			case PA_AS_IS :
+				break;
+				
+			case PA_LEFT :
+				this.Pad(Para.PAlign.PA_RIGHT, ' ', fillSpace);
+				break;
+			
+			case PA_RIGHT :
+				this.Pad(Para.PAlign.PA_LEFT, ' ', fillSpace);
+				break;
+			
+			case PA_CENTER :
+				this.Pad(Para.PAlign.PA_CENTER, ' ', fillSpace);
+				break;
+			
+			case PA_FILL :
+				
+				if ( fillSpace > 0 ) { 
+				
+					List<Integer[]> words = new ArrayList<Integer[]>(); 
+					boolean firstWord = true;
+					// look for words
+					Matcher m = Pattern.compile( "[\\Wp{Punct}\\p{Blank}]*[\\w'-]+[\\p{Punct}\\p{Blank}]*" )
+									.matcher( this.getBuff() );
+				
+					while ( m.find() )
+					{
+						if ( firstWord ) // we don't add spaces before the first word
+							firstWord = false;
+						else
+							words.add( new Integer[] {m.start(), 0} );
+					}
+					
+					int maxSpaces = 1;
+					int pos, idx;
+					int tries = 0;
+					while ( fillSpace > 0 ) {
+						
+						idx = ( int )( Math.random() * ( words.size() - 1 ) );
+						pos = words.get(idx)[0];
+						
+						if ( words.get( idx )[1] < maxSpaces ) {
+							words.get( idx )[0] = pos + 1;
+							words.get( idx )[1] = maxSpaces;
+							// insert space before the word
+							this.InsertChar( pos, ' ' );
+							fillSpace--;
+							tries = 0;
+							
+							// shift all words after it for one space
+							for ( int i = idx + 1; i < words.size(); i++ )
+								words.get( i )[0] = words.get( i )[0] + 1;
+						}
+						else 
+							if ( tries++ > 2 ) {// if it not succeeded to find appropriate position three times 
+								maxSpaces++;    // increase number of allowed spaces before the word.
+								tries = 0;
+							}
+					}
+				}
+				break;
+		}
+				
+	}
+
+	/**
+	 * Split ParaLine into a list of lines of length len
+	 * 
+	 * @param align    -- lines alignment
+	 * @param len      -- length of the resulting lines
+	 * @param maxLines -- the maximum number of the lines to split onto 
+	 *                    if it's -1 then number of lines wouldn't controlled
+	 * 
+	 * @return array of aligned lines of given length len
+	 */
+	public ArrayList<ParaLine> Split(PAlign align, int len, int maxLines ) {
+		
+		ArrayList<ParaLine> lines = new ArrayList<>();
+		
+		while ( this.buff.length() > len && ( maxLines == -1 || maxLines-- > 0 ) ) {
+			lines.add( this.CutFormattedLine( align, len) );
+			this.Trim( TrimSide.TS_LEFT );
+		}
+		
+		if ( this.buff.length() > 0 && ( maxLines == -1 || maxLines > 0 ) )
+			lines.add( this.CutHead( this.buff.length() ) );
+		
+		return lines;
 	}
 	
 }
