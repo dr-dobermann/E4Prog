@@ -13,6 +13,8 @@ package textformatter;
 import lombok.*;
 import lombok.extern.java.Log;
 import textformatter.Para.PAlign;
+import textformatter.Para.ParagraphCommand;
+import textformatter.ParaLine.TrimSide;
 
 import java.util.*;
 import java.util.regex.*;
@@ -34,10 +36,10 @@ public class TextFormatter {
 	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
 	
 	private @Getter int interval = 1;
-	private @Getter int[] spaces = new int[] {0, 0};
+	private @Getter int[] spaces = new int[] {0, 1};
 	private @Getter int[] margins = new int[] {0, 0};
 	private @Getter int indent = 3;
-	private boolean firsLineInPara = true;
+	private boolean firstLineOnPage = true;
 	
 	private int PageNum = 1;
 	
@@ -69,7 +71,7 @@ public class TextFormatter {
 	private ArrayList<ParaLine> footnotes = new ArrayList<>();
 	private ArrayList<ParaLine> nextPageFNotes = new ArrayList<>();
 	
-	private @Getter boolean closeParagraph = false;
+	private @Getter Para.ParagraphCommand pCmd = ParagraphCommand.PC_NONE;
 	
 	private @Getter ParaLine currLine = new ParaLine( 0 );
 	
@@ -127,10 +129,11 @@ public class TextFormatter {
 		if ( pl.GetLength() == 0 ) {
 			if ( align != Para.PAlign.PA_AS_IS ) {
 				if ( ++emptyLinesCount > 1 ) // if there is more than 1 empty lines in a row, close the paragraph
-					closeParagraph = true;
+					pCmd = ParagraphCommand.PC_END;
 				else  {						 // if there is first empty line, close current sentence
 					if ( currLine.GetLength() > 0 )
-						lines.add( currLine );
+						lines.add( currLine.Copy() );
+					
 					currLine.Clear();
 				}
 				
@@ -141,7 +144,7 @@ public class TextFormatter {
 					return lines.stream();
 				}
 		}
-		else
+		else 
 			emptyLinesCount = 0;
 		
 		//check if there is open footnote exists
@@ -158,7 +161,7 @@ public class TextFormatter {
 			return lines.stream();
 		}
 		
-		if ( closeParagraph ) {
+		if ( pCmd == ParagraphCommand.PC_END ) {
 						
 			if ( currLine.GetLength() > 0 ) {
 				
@@ -172,27 +175,40 @@ public class TextFormatter {
 			}
 			
 			// add spaces after the current paragraph
-			AddEmptyLines( spaces[1] );
+			lines.addAll( AddEmptyLines( spaces[1] ) );
 			
 			// TODO: adding spaces before a new paragraph
 			// should be made before the new line put on page
 			// AddEmptyLines( spaces[0] );
 			
-			closeParagraph = false;
+			pCmd = ParagraphCommand.PC_BEGIN;
 		}
 					
 		if ( align != Para.PAlign.PA_AS_IS ) {
 			
-			pl.Trim( ParaLine.TrimSide.TS_BOTH );
-			currLine.AddPline( ParaLine.PrepareString(" ") );
+			pl.Trim( ParaLine.TrimSide.TS_LEFT );
+			
 			currLine.AddPline( pl );
 			
-			while ( --linesLeft > 0 && currLine.GetLength() > width )
+			while ( --linesLeft > 0 && currLine.GetLength() > width ) {
 				lines.add( currLine.CutFormattedLine( align, width ) );
+				currLine.Trim( TrimSide.TS_LEFT );
+			}
 			
 		}
 		else 
 			lines.add( pl );
+		
+		if ( pCmd == ParagraphCommand.PC_BEGIN &&
+			 lines.size() > 0 &&
+			 !firstLineOnPage &&
+			 align != Para.PAlign.PA_AS_IS ) {
+			
+			lines.addAll( 0, AddEmptyLines( spaces[0] ) );
+			pCmd = ParagraphCommand.PC_NONE;
+		}
+		
+		firstLineOnPage = false;
 		
 		return lines.stream();
 	}
@@ -212,9 +228,14 @@ public class TextFormatter {
 	 * Adds empty lines to
 	 * @param i
 	 */
-	private void AddEmptyLines(int i) {
-		// TODO Auto-generated method stub
+	private ArrayList<ParaLine> AddEmptyLines( int i ) {
+
+		ArrayList<ParaLine>spacer = new ArrayList<ParaLine>();
 		
+		while ( linesLeft-- >= 1 && i-- >= 1 )
+			spacer.add( ParaLine.PrepareString( "" ) );
+		
+		return spacer;
 	}
 
 	/**
@@ -256,11 +277,13 @@ public class TextFormatter {
 		// add footnote index prefix and save it to the buffer
 		currFNote.add( noteID
 				        .AddPline( pl.CutFormattedLine( Para.PAlign.PA_FILL, fnWidth - noteID.GetLength() ) ) );
+		pl.Trim( TrimSide.TS_LEFT );
 		
 		if ( pl.GetLength() > fnWidth )
 			currFNote.addAll( pl.Split( PAlign.PA_FILL, fnWidth - noteID.GetLength(), -1 ) );
 		else
-			currFNote.add( pl );		
+			if ( pl.GetLength() > 0 )
+				currFNote.add( pl );		
 	}
 
 	/**
@@ -441,7 +464,7 @@ public class TextFormatter {
 				if ( w < fnWidth )
 					width = w;
 			
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			
@@ -458,7 +481,7 @@ public class TextFormatter {
 				return null;
 			}
 			
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			
@@ -486,7 +509,7 @@ public class TextFormatter {
 			spaces[0] = sB;
 			spaces[1] = sA;
 			
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			
@@ -509,7 +532,7 @@ public class TextFormatter {
 			margins[0] = mL;
 			margins[1] = mR;
 			
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			
@@ -530,7 +553,7 @@ public class TextFormatter {
 			}
 			interval = intr;
 			
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			
@@ -552,7 +575,7 @@ public class TextFormatter {
 
 			linesToFeed = lines * interval;
 
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			
@@ -573,7 +596,7 @@ public class TextFormatter {
 			
 			linesToFeed = lines;
 
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			
@@ -658,7 +681,7 @@ public class TextFormatter {
 			break;
 			
 		case "pb" :			
-			closeParagraph = true;
+			pCmd = ParagraphCommand.PC_END;
 			
 			break;
 			

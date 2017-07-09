@@ -24,6 +24,12 @@ class Para {
 		PA_FILL
 	};
 	
+	enum ParagraphCommand {
+		PC_BEGIN,
+		PC_NONE,
+		PC_END
+	}
+	
 }
 
 class Footnote {

@@ -441,8 +441,9 @@ class ParaLine {
 		
 		pl.buff.append( buff );
 		
-		for ( Decor dec : decors )
-			pl.InsertDecor( dec.getCmd(), dec.getPos(), dec.getData() );
+		if ( decors != null )
+			for ( Decor dec : decors )
+				pl.InsertDecor( dec.getCmd(), dec.getPos(), dec.getData() );
 		
 		return pl;		
 	}
@@ -517,7 +518,7 @@ class ParaLine {
 		int pos;
 		
 		for ( int p = 0; p < buff.length(); p ++ ) {
-			pos = ParaLine.TrimSide.TS_RIGHT == side ? buff.length() - p - 1 : p;
+			pos =  (ParaLine.TrimSide.TS_RIGHT == side ? buff.length() - p - 1 : p );
 			
 			if ( buff.charAt( pos ) == ' ' ) {
 				
@@ -830,6 +831,8 @@ class ParaLine {
 		pl.AddPline( this.CutHead( maxDelPos ) );
 		
 		pl.Align( paFill, len );
+		
+		pl.Trim( TrimSide.TS_LEFT );
 		
 		return pl;
 	}

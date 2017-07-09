@@ -141,7 +141,7 @@ Add alias for the symbol to mask it further
 There are could be text decoration commands presented inside the paragraph.
 They look as &<command_name>+/-. 
 <command_name> could consists of a few commands combined. 
-For some commands it could be possible to provide additional information in 
+For some commands it could be possible to provide additional information in
 {} after the starting command.
 ?footnote 1
 Only used for footnotes yet.
