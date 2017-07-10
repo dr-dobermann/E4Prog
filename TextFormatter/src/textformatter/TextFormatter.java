@@ -36,7 +36,7 @@ public class TextFormatter {
 	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
 	
 	private @Getter int interval = 1;
-	private @Getter int[] spaces = new int[] {0, 1};
+	private @Getter int[] spaces = new int[] {1, 1};
 	private @Getter int[] margins = new int[] {0, 0};
 	private @Getter int indent = 3;
 	private boolean firstLineOnPage = true;
@@ -131,10 +131,10 @@ public class TextFormatter {
 				if ( ++emptyLinesCount > 1 ) // if there is more than 1 empty lines in a row, close the paragraph
 					pCmd = ParagraphCommand.PC_END;
 				else  {						 // if there is first empty line, close current sentence
-					if ( currLine.GetLength() > 0 )
-						lines.add( currLine.Copy() );
-					
-					currLine.Clear();
+					if ( currLine.GetLength() > 0 ) {
+						lines.addAll( currLine.Split( align, width, -1 ) );
+						currLine.Clear();
+					}
 				}
 				
 				return lines.stream();
@@ -175,11 +175,8 @@ public class TextFormatter {
 			}
 			
 			// add spaces after the current paragraph
-			lines.addAll( AddEmptyLines( spaces[1] ) );
-			
-			// TODO: adding spaces before a new paragraph
-			// should be made before the new line put on page
-			// AddEmptyLines( spaces[0] );
+			if ( lines.size() > 0 )
+				lines.addAll( AddEmptyLines( spaces[0] ) );
 			
 			pCmd = ParagraphCommand.PC_BEGIN;
 		}
@@ -199,6 +196,8 @@ public class TextFormatter {
 		else 
 			lines.add( pl );
 		
+		// adding spaces before a new paragraph
+		// shouldn't be made before the first line on the page
 		if ( pCmd == ParagraphCommand.PC_BEGIN &&
 			 lines.size() > 0 &&
 			 !firstLineOnPage &&
@@ -808,7 +807,7 @@ public class TextFormatter {
 	 * 
 	 * @throws TFException
 	 */
-	private ArrayList<String> GetCmdParams( String str, String cmd, Class[] pTypes ) {
+	private ArrayList<String> GetCmdParams( String str, String cmd, Class<?>[] pTypes ) {
 		
 		StringBuilder pSrchStr = new StringBuilder( "^\\?(\\b" ).append(cmd).append( "\\b){1}" );
 		ArrayList<String> params = new ArrayList<>();
