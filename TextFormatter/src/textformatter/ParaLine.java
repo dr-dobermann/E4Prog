@@ -12,7 +12,6 @@ package textformatter;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.regex.*;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import lombok.*;

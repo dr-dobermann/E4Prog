@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import lombok.*;
+import textformatter.Para.PAlign;
 
 class Para {
 
@@ -34,9 +35,9 @@ class Para {
 
 class Footnote {
 	
-	@Getter ArrayList<ParaLine> lines = new ArrayList<>();
+	private @Getter ArrayList<ParaLine> lines = new ArrayList<>();
 	
-	@Getter int NoteID;
+	private @Getter int NoteID;
 	
 	public Footnote( int id ) {
 		NoteID = id;
@@ -46,6 +47,58 @@ class Footnote {
 		
 		lines.add( pl );
 	}
+} 
+
+class ParaSettings {
+	
+	private @Getter @Setter int width = 72;
+	private @Getter @Setter int interval = 1;
+	private @Getter @Setter int spaces[] = new int[] {0, 0};
+	private @Getter @Setter int margins[] = new int[] {0, 0};
+	private @Getter @Setter int indent = 0;
+	
+	private @Getter @Setter PAlign align;
+	
+	public ParaSettings() {
+	}
+	
+	public ParaSettings( int fw,
+			             int intrv,
+			             int sp[],
+			             int mr[],
+			             int ind,
+			             PAlign algn ) {
+		
+		width = fw;
+		interval = intrv;
+		spaces = sp;
+		margins = mr;
+		indent = ind;
+		align = algn;
+	}
+	
+	public ParaSettings Copy() {
+		
+		ParaSettings nSet = new ParaSettings();
+		
+		nSet.width = width;
+		nSet.indent = indent;
+		nSet.interval = interval;
+		nSet.margins = margins;
+		nSet.spaces = spaces;
+		nSet.align = align;
+		
+		return nSet;
+	}
+	
+	public int GetTextWidht( boolean firstLine ) {
+		
+		return width - 
+			   margins[0] - 
+			   margins[1] - 
+			   ( firstLine ? indent : 0 );
+	}
+	
 }
 
 class Command {
@@ -67,9 +120,9 @@ class Command {
 		CMD_ALIAS
 	}
 	
-	@Getter CommandName command;
+	private CommandName command;
 	
-	@Getter HashMap<String, String> params = new HashMap<>();
+	private HashMap<String, String> params = new HashMap<>();
 	
 	public Command( Command.CommandName cmd ) {
 		

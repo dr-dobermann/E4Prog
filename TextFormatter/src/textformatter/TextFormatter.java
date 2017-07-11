@@ -20,8 +20,6 @@ import java.util.*;
 import java.util.regex.*;
 import java.util.stream.Stream;
 
-import javax.jws.soap.SOAPBinding.ParameterStyle;
-
 import java.io.IOException;
 import java.nio.file.*;
 
@@ -29,22 +27,34 @@ import java.nio.file.*;
 @Log
 public class TextFormatter {
 
-	private @Getter int width = 72;
-	private @Getter int fnWidth = width;
 	private @Getter int height = 40;
 	private @Getter int linesLeft = height;
-	private @Getter Para.PAlign align = Para.PAlign.PA_LEFT;
-	
-	private @Getter int interval = 1;
-	private @Getter int[] spaces = new int[] {1, 1};
-	private @Getter int[] margins = new int[] {0, 0};
-	private @Getter int indent = 3;
 	private boolean firstLineOnPage = true;
-	
 	private int PageNum = 1;
-	
 	private int emptyLinesCount = 0;
 
+	private ParaSettings currPSet = new ParaSettings( 72,
+													  1, 
+													  new int[] { 1, 1}, 
+													  new int[] { 0, 0},
+													  0,
+													  PAlign.PA_LEFT );
+	private ParaSettings newPSet = null;
+	private @Getter Para.ParagraphCommand pCmd = ParagraphCommand.PC_NONE;
+	
+	private int fNoteID = 1;
+	private static final String fNoteFmt = "%3d) "; // TODO: Set different formats for a footnote identification
+	private static final int fNoteFmtLen = String.format( fNoteFmt, 1 ).length();
+	private int fnLines = 0;
+	private ArrayList<ParaLine> currFNote = new ArrayList<>();
+
+	private ParaSettings fnPSet = new ParaSettings( 72,
+												    1, 
+												    new int[] {0,1}, 
+												    new int[] {fNoteFmtLen, 0}, 
+												    -fNoteFmtLen, 
+												    PAlign.PA_FILL );
+	
 	private @Getter int headerHeight = 0;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
 	private @Getter int headerLine;
@@ -55,23 +65,14 @@ public class TextFormatter {
 	private Map<String, String> aliases = new HashMap<String, String>();
 
 	final Pattern cmdName = Pattern.compile( "^\\?(\\b(size|align|par|margin|interval|feedlines|feed|newpage|left|header|pnum|pb|footnote|alias)\\b)?" );
-	
-
-	
+		
 	private @Getter boolean newPage = false;
 	private @Getter int linesToFeed = 0;
 	
-	private int fNoteID = 1;
-	private static final String fNoteFmt = "%3d) "; // TODO: Set different formats for a footnote identification
-	private static final int fNoteFmtLen = String.format( fNoteFmt, 1 ).length();
-	private int fnLines = 0;
-	private ArrayList<ParaLine> currFNote = new ArrayList<>();
 	
-	// footnotes on the bottom of the current and next pages
+	// footnotes on the bottom of the current and the next pages
 	private ArrayList<ParaLine> footnotes = new ArrayList<>();
-	private ArrayList<ParaLine> nextPageFNotes = new ArrayList<>();
-	
-	private @Getter Para.ParagraphCommand pCmd = ParagraphCommand.PC_NONE;
+	private ArrayList<ParaLine> nextPageFNotes = new ArrayList<>();	
 	
 	private @Getter ParaLine currLine = new ParaLine( 0 );
 	
@@ -127,12 +128,19 @@ public class TextFormatter {
 		
 		//remove empty lines if alignment isn't set to PA_AS_IS
 		if ( pl.GetLength() == 0 ) {
-			if ( align != Para.PAlign.PA_AS_IS ) {
-				if ( ++emptyLinesCount > 1 ) // if there is more than 1 empty lines in a row, close the paragraph
+			if ( currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
+				if ( ++emptyLinesCount > 1 ) {  // if there is more than 1 empty lines in a row, close the paragraph
 					pCmd = ParagraphCommand.PC_END;
+					newPSet = currPSet.Copy();
+				}
 				else  {						 // if there is first empty line, close current sentence
 					if ( currLine.GetLength() > 0 ) {
-						lines.addAll( currLine.Split( align, width, -1 ) );
+						ArrayList<ParaLine> newLines = currLine.Split( currPSet.getAlign(), 
+                   			   										   currPSet.GetTextWidht(false), 
+                   			   										   linesLeft ); 
+						lines.addAll( newLines );
+						linesLeft -= newLines.size();
+						
 						currLine.Clear();
 					}
 				}
@@ -140,7 +148,9 @@ public class TextFormatter {
 				return lines.stream();
 			}
 			else { 
-					lines.add( pl );
+					if ( linesLeft > 0 )
+						lines.add( pl );
+					
 					return lines.stream();
 				}
 		}
@@ -163,13 +173,22 @@ public class TextFormatter {
 		
 		if ( pCmd == ParagraphCommand.PC_END ) {
 						
-			if ( currLine.GetLength() > 0 ) {
+			if ( currLine.GetLength() > 0 && linesLeft > 0 ) {
 				
 				// process first line of paragraph
-				lines.add( currLine.CutFormattedLine( align, width - margins[0] - margins[1] - indent ) );
+				lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
+													  currPSet.GetTextWidht( true ) ) );
+				linesLeft--;
+				
 				// process followed lines
-				if ( currLine.GetLength() > 0 )
-					lines.addAll( currLine.Split( align, width - margins[0] - margins[1], linesLeft ) );
+				if ( currLine.GetLength() > 0 && linesLeft > 0 ) {
+					ArrayList<ParaLine> newLines = currLine.Split( currPSet.getAlign(), 
+								   currPSet.getWidth(), 
+								   linesLeft ); 
+					lines.addAll( newLines );
+					linesLeft -= newLines.size();
+					
+				}
 				
 				AddMarginsTo( lines, indent, margins );
 			}
