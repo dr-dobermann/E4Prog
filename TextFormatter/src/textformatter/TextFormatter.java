@@ -12,6 +12,7 @@ package textformatter;
 
 import lombok.*;
 import lombok.extern.java.Log;
+import textformatter.Decor.DeCmd;
 import textformatter.Para.PAlign;
 import textformatter.Para.ParagraphCommand;
 import textformatter.ParaLine.TrimSide;
@@ -43,19 +44,22 @@ public class TextFormatter {
 	private ParaSettings newPSet = null;
 	private @Getter Para.ParagraphCommand pCmd = ParagraphCommand.PC_NONE;
 	
-	private int fNoteID = 1;
-	private static final String fNoteFmt = "%3d) "; // TODO: Set different formats for a footnote identification
-	private static final int fNoteFmtLen = String.format( fNoteFmt, 1 ).length();
+  private static final String fNoteFmt = "%3d) "; // TODO: Set different formats for a footnote identification
+  private static final int fNoteFmtLen = String.format( fNoteFmt, 1 ).length();
+  private ParaSettings fnPSet = 
+    new ParaSettings( 72,
+                      1, 
+                      new int[] {0,1}, 
+                      new int[] {fNoteFmtLen, 0}, 
+                      -fNoteFmtLen, 
+                      PAlign.PA_FILL );
+  private int fNoteID = 1;
 	private int fnLines = 0;
-	private ArrayList<ParaLine> currFNote = new ArrayList<>();
+	private ParaLine currFNote = new ParaLine( fnPSet.getWidth() );
+  // footnotes on the bottom of the current and the next pages
+  private ArrayList<ParaLine> footnotes = new ArrayList<>();
+  private ArrayList<ParaLine> nextPageFNotes = new ArrayList<>(); 
 
-	private ParaSettings fnPSet = new ParaSettings( 72,
-												    1, 
-												    new int[] {0,1}, 
-												    new int[] {fNoteFmtLen, 0}, 
-												    -fNoteFmtLen, 
-												    PAlign.PA_FILL );
-	
 	private @Getter int headerHeight = 0;
 	private @Getter Para.PAlign headerAlign = Para.PAlign.PA_CENTER;
 	private @Getter int headerLine;
@@ -69,12 +73,7 @@ public class TextFormatter {
 		
 	private @Getter boolean newPage = false;
 	private @Getter int linesToFeed = 0;
-	
-	
-	// footnotes on the bottom of the current and the next pages
-	private ArrayList<ParaLine> footnotes = new ArrayList<>();
-	private ArrayList<ParaLine> nextPageFNotes = new ArrayList<>();	
-	
+		
 	private @Getter ParaLine currLine = new ParaLine( 0 );
 	
 	private static TextFormatter stateKeeper = null;
@@ -319,33 +318,14 @@ public class TextFormatter {
 	 */
 	private void AddFootnoteLine( ParaLine pl ) {
 		
-		ParaLine noteID;
-		// First line should be exposed by a footnote index with 
-		// negative indent
-		if ( currFNote.size() == 0 )
-			noteID = new ParaLine( String.format( fNoteFmt, fNoteID ) ) ;
-		else
-			noteID = new ParaLine( String.format( "%5s", " ") ); // TODO: should be replaced when footnote format changed
-	
-		// Add pl to the last line in a current footnote buffer.
-		if ( currFNote.size() > 0 &&
-			 currFNote.get( currFNote.size() - 1 ).GetLength() < fnWidth ) {
-			pl = currFNote.get( currFNote.size() - 1 ).AddPline( pl );
-			currFNote.remove( currFNote.size() - 1 );
-		}
+		if ( currFNote.GetLength() == 0 )
+			currFNote = new ParaLine( String.format( fNoteFmt, fNoteID ) );
+
+		currFNote.AddPline( ParaLine.PrepareString( " " ) );
 		
-		// if the line is greater than the given width, cut the rest to the next buffer line
-		// and align the current line as defined. 
-		// add footnote index prefix and save it to the buffer
-		currFNote.add( noteID
-				        .AddPline( pl.CutFormattedLine( Para.PAlign.PA_FILL, fnWidth - noteID.GetLength() ) ) );
 		pl.Trim( TrimSide.TS_LEFT );
-		
-		if ( pl.GetLength() > fnWidth )
-			currFNote.addAll( pl.Split( PAlign.PA_FILL, fnWidth - noteID.GetLength(), -1 ) );
-		else
-			if ( pl.GetLength() > 0 )
-				currFNote.add( pl );		
+	
+		currFNote.AddPline( pl );
 	}
 
 	/**
@@ -357,15 +337,15 @@ public class TextFormatter {
 
 		Footnote fnote = new Footnote( GetFnoteID() );
 		
-		AddMarginsTo( currFNote, -fNoteFmtLen, new int[] {5, 0} );
+		fnote.getLines().addAll( PushLinesFromBuffer( currFNote, 
+		                                              fnPSet, 
+		                                              false, 
+		                                              true) );
 		
-		for ( ParaLine pl : currFNote ) {
-			fnote.AddLine( pl );
-			log.info( String.format( "Footnote line [%s]", pl.toString() ) );
-		}
-
 		// add footnote decoration to the last text line
 		currLine.InsertDecor( Decor.DeCmd.DCS_FNOTE, currLine.GetLength(), fnote );
+		currLine.AddPline( ParaLine.PrepareString( String.format( "%d)", fnote.getNoteID() ) ) );
+		currLine.InsertDecor( DeCmd.DCE_FNOTE, currLine.GetLength(), null );
 		log.info( currLine.toString() );
 		
 		// add footnote lines to the current page
@@ -373,9 +353,7 @@ public class TextFormatter {
 		if ( footnotes.size() == 0 && linesLeft >= 3 ) {  // one line for the line with footnote link
 														  // one or zero line for the footnote header
 													      // one line for footnote itself
-			ParaLine pl = new ParaLine( fnWidth );
-			pl.Pad( PAlign.PA_LEFT, '-', fnWidth );
-			footnotes.add( pl );
+			footnotes.add( GetDividerLine( fnPSet, '-') );
 			linesLeft--;
 		}
 		
@@ -384,28 +362,35 @@ public class TextFormatter {
 		if ( linesLeft < 2 ) 
 			newPage = true;
 		else
-			// add to the page footnote as many lines as possible
-			while ( currFNote.size() > 0 ) {  // one line for the line with footnote link
-				                              // one line for the footnote itself
-				footnotes.add( currFNote.get( 0 ) );
-				currFNote.remove( 0 );
-				linesLeft--;
-			}
-		
-		// add the rest of lines to the next page footnotes
-		while ( currFNote.size() > 0 ) {
-			if ( nextPageFNotes.size() == 0 ) {
-				ParaLine pl = new ParaLine( fnWidth );
-				pl.Pad( PAlign.PA_LEFT, '-', fnWidth );
-				nextPageFNotes.add( pl );
-			}
-			nextPageFNotes.add( currFNote.get( 0 ) );
-			currFNote.remove( 0 );
-		}
-	
+			for ( ParaLine pl : fnote.getLines() )
+			  if ( linesLeft > 1 ) { // one free line should left on the page to 
+			                         // put the line with footnote link
+			    // add to the page footnote as many lines as possible
+			    footnotes.add( pl );
+			    if ( linesLeft > 1 )
+			      linesLeft--;
+			  }
+			  else
+			    nextPageFNotes.add( pl );
 	}
 
 	/**
+	 * Creates and returns a ParaLine formed as a line of char ch
+	 * @param ps  -- ParaSettings for width of the 
+	 * @param ch  -- Character to fill the line
+	 * 
+	 * @return line of character ch of width ps.
+	 */
+	private ParaLine GetDividerLine( ParaSettings ps, char ch ) {
+	  
+    ParaLine pl = new ParaLine( ps.getWidth() );
+    
+    pl.Pad( PAlign.PA_LEFT, ch, ps.getWidth() );
+    
+    return pl;
+  }
+
+  /**
 	 * Replaces all aliases to their original values
 	 * 
 	 * @param str  -- string to process 
