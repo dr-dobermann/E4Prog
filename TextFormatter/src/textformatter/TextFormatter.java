@@ -32,6 +32,7 @@ public class TextFormatter {
 	private boolean firstLineOnPage = true;
 	private int PageNum = 1;
 	private int emptyLinesCount = 0;
+	private int nonEmptyLinescount = 0;
 
 	private ParaSettings currPSet = new ParaSettings( 72,
 													  1, 
@@ -129,19 +130,21 @@ public class TextFormatter {
 		//remove empty lines if alignment isn't set to PA_AS_IS
 		if ( pl.GetLength() == 0 ) {
 			if ( currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
+			  
+			  nonEmptyLinescount = 0;
+			  
 				if ( ++emptyLinesCount > 1 ) {  // if there is more than 1 empty lines in a row, close the paragraph
 					pCmd = ParagraphCommand.PC_END;
 					newPSet = currPSet.Copy();
 				}
 				else  {						 // if there is first empty line, close current sentence
 					if ( currLine.GetLength() > 0 ) {
-						ArrayList<ParaLine> newLines = currLine.Split( currPSet.getAlign(), 
-                   			   										   currPSet.GetTextWidht(false), 
-                   			   										   linesLeft ); 
-						lines.addAll( newLines );
-						linesLeft -= newLines.size();
-						
-						currLine.Clear();
+		
+						lines.addAll( PushLinesFromBuffer( currLine,
+						                                   currPSet,
+						                                   true,
+						                                   nonEmptyLinescount == 0 ) );
+						nonEmptyLinescount = lines.size();
 					}
 				}
 				
@@ -160,9 +163,6 @@ public class TextFormatter {
 		//check if there is open footnote exists
 		if ( fnLines > 0 ) {
 			
-			// TODO: current line should be not longer than the current paragraph width
-			// it will let to put the line with footnote link after the footnote closing
-			
 			AddFootnoteLine( pl );
 			
 			if ( --fnLines == 0 )
@@ -171,58 +171,52 @@ public class TextFormatter {
 			return lines.stream();
 		}
 		
+		// process paragraph break state
 		if ( pCmd == ParagraphCommand.PC_END ) {
 						
-			if ( currLine.GetLength() > 0 && linesLeft > 0 ) {
-				
-				// process first line of paragraph
-				lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
-													  currPSet.GetTextWidht( true ) ) );
-				linesLeft--;
-				
-				// process followed lines
-				if ( currLine.GetLength() > 0 && linesLeft > 0 ) {
-					ArrayList<ParaLine> newLines = currLine.Split( currPSet.getAlign(), 
-								   currPSet.getWidth(), 
-								   linesLeft ); 
-					lines.addAll( newLines );
-					linesLeft -= newLines.size();
-					
-				}
-				
-				AddMarginsTo( lines, indent, margins );
-			}
+			if ( currLine.GetLength() > 0 && linesLeft > 0 )
+				lines.addAll( PushLinesFromBuffer( currLine, currPSet, true, nonEmptyLinescount == 0 ) );
 			
 			// add spaces after the current paragraph
 			if ( lines.size() > 0 )
-				lines.addAll( AddEmptyLines( spaces[0] ) );
+				lines.addAll( AddEmptyLines( currPSet.getSpaces()[1]) );
 			
 			pCmd = ParagraphCommand.PC_BEGIN;
+			currPSet = newPSet;
+			nonEmptyLinescount = 0;
 		}
 					
-		if ( align != Para.PAlign.PA_AS_IS ) {
+		if ( currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
 			
 			pl.Trim( ParaLine.TrimSide.TS_LEFT );
 			
 			currLine.AddPline( pl );
 			
-			while ( --linesLeft > 0 && currLine.GetLength() > width ) {
-				lines.add( currLine.CutFormattedLine( align, width ) );
+			// push all full lines from the buffer until the buffer lenght
+			// would be less than current paragraph widht
+			while ( --linesLeft > 0 && 
+			        currLine.GetLength() > currPSet.GetTextWidht( nonEmptyLinescount == 0 ) ) {
+				
+			  lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
+			                                        currPSet.GetTextWidht( nonEmptyLinescount++ == 0 ) ) );
 				currLine.Trim( TrimSide.TS_LEFT );
 			}
 			
 		}
-		else 
+		else { 
 			lines.add( pl );
+			
+			nonEmptyLinescount++;
+		}
 		
 		// adding spaces before a new paragraph
 		// shouldn't be made before the first line on the page
 		if ( pCmd == ParagraphCommand.PC_BEGIN &&
 			 lines.size() > 0 &&
 			 !firstLineOnPage &&
-			 align != Para.PAlign.PA_AS_IS ) {
+			 currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
 			
-			lines.addAll( 0, AddEmptyLines( spaces[0] ) );
+			lines.addAll( 0, AddEmptyLines( currPSet.getSpaces()[0] ) );
 			pCmd = ParagraphCommand.PC_NONE;
 		}
 		
@@ -232,13 +226,63 @@ public class TextFormatter {
 	}
 	
 	/**
-	 * @param lines
+	 * Pushes given buffer into list of lines
+	 * 
+	 * @param buff
+	 * @param ps
+	 * @param reduceFreeLinesCounter
+	 * @param withFirstLine
+	 * @return
 	 */
-	private void AddMarginsTo( ArrayList<ParaLine> lines, int indent, int margins[] ) {
+	private ArrayList<ParaLine> 
+	  PushLinesFromBuffer( ParaLine buff,
+	                       ParaSettings ps,
+		                     boolean reduceFreeLinesCounter, 
+		                     boolean withFirstLine ) {
+
+		
+		ArrayList<ParaLine> newLines = new ArrayList<>();
+		
+		// put first line if need be
+		if ( withFirstLine && 
+			 reduceFreeLinesCounter && 
+			 linesLeft > 0 )	
+			newLines.add( buff.CutFormattedLine( ps.getAlign(), 
+						 			 			 ps.GetTextWidht( withFirstLine ) ) );
+		// put the rest of lines
+		if ( reduceFreeLinesCounter && linesLeft > 0 )
+			newLines.addAll( buff.Split( ps.getAlign(),
+					                     ps.GetTextWidht( false ), 
+					                     reduceFreeLinesCounter ? linesLeft : -1 ) );
+		
+		
+		AddMarginsTo( newLines, ps, withFirstLine );
+		
+		if ( reduceFreeLinesCounter )
+			linesLeft -= newLines.size();
+		
+		return newLines;
+	}
+
+	/**
+	 * Adds margins around the lines
+	 * 
+	 * @param lines     -- lines to process
+	 * @param ps	    -- paragraph settings
+	 * @param withFirst -- use indent for first line in an array
+	 * 
+	 */
+	private void AddMarginsTo( ArrayList<ParaLine> lines, ParaSettings ps, boolean withFirst ) {
 		
 		for ( int l = 0; l < lines.size(); l++ ) {
-			lines.get( l ).Pad( PAlign.PA_LEFT, ' ', margins[0] + ( l == 0 ? indent : 0 ) );
-			lines.get( l ).Pad( PAlign.PA_RIGHT, ' ', margins[1] );
+			lines.get( l ).Pad( PAlign.PA_LEFT, 
+		                      ' ', 
+					                ps.getMargins()[0] + 
+					            	( withFirst && l == 0 ? ps.getIndent() : 0 ) );
+			if ( l < lines.size() - 1 ) 
+			lines.get( l ).Pad( PAlign.PA_RIGHT, 
+					                ' ', 
+					                ps.getMargins()[1] );
 		}
 	}
 
