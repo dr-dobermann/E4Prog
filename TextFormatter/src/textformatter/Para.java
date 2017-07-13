@@ -26,6 +26,7 @@ class Para {
 	};
 	
 	enum ParagraphCommand {
+	  PC_SNTC_END,
 		PC_BEGIN,
 		PC_NONE,
 		PC_END

@@ -158,7 +158,7 @@ public class TextFormatter {
 		}
 		else 
 			emptyLinesCount = 0;
-		
+				
 		//check if there is open footnote exists
 		if ( fnLines > 0 ) {
 			
@@ -169,7 +169,7 @@ public class TextFormatter {
 			
 			return lines.stream();
 		}
-		
+        
 		// process paragraph break state
 		if ( pCmd == ParagraphCommand.PC_END ) {
 						
@@ -185,14 +185,15 @@ public class TextFormatter {
 			nonEmptyLinescount = 0;
 		}
 					
+		// process usual line
 		if ( currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
 			
 			pl.Trim( ParaLine.TrimSide.TS_LEFT );
 			
 			currLine.AddPline( pl );
 			
-			// push all full lines from the buffer until the buffer lenght
-			// would be less than current paragraph widht
+			// push all full lines from the buffer until the buffer length
+			// would be less than the current paragraph width
 			while ( --linesLeft > 0 && 
 			        currLine.GetLength() > currPSet.GetTextWidht( nonEmptyLinescount == 0 ) ) {
 				
@@ -207,17 +208,17 @@ public class TextFormatter {
 			
 			nonEmptyLinescount++;
 		}
-		
-		// adding spaces before a new paragraph
-		// shouldn't be made before the first line on the page
-		if ( pCmd == ParagraphCommand.PC_BEGIN &&
-			 lines.size() > 0 &&
-			 !firstLineOnPage &&
-			 currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
-			
-			lines.addAll( 0, AddEmptyLines( currPSet.getSpaces()[0] ) );
-			pCmd = ParagraphCommand.PC_NONE;
-		}
+
+    // addition spaces before a new paragraph
+    // shouldn't be made before the first line on the page
+    if ( pCmd == ParagraphCommand.PC_BEGIN &&
+       lines.size() > 0 &&
+       !firstLineOnPage &&
+       currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
+      
+      lines.addAll( 0, AddEmptyLines( currPSet.getSpaces()[0] ) );
+      pCmd = ParagraphCommand.PC_NONE;
+    }
 		
 		firstLineOnPage = false;
 		
@@ -243,13 +244,15 @@ public class TextFormatter {
 		ArrayList<ParaLine> newLines = new ArrayList<>();
 		
 		// put first line if need be
-		if ( withFirstLine && 
-			 reduceFreeLinesCounter && 
-			 linesLeft > 0 )	
+		if ( buff.GetLength() > 0 &&
+		     withFirstLine && 
+			   ( !reduceFreeLinesCounter || linesLeft > 0 ) )
 			newLines.add( buff.CutFormattedLine( ps.getAlign(), 
 						 			 			 ps.GetTextWidht( withFirstLine ) ) );
+		
 		// put the rest of lines
-		if ( reduceFreeLinesCounter && linesLeft > 0 )
+		if ( buff.GetLength() > 0 && 
+		     ( !reduceFreeLinesCounter || linesLeft  > 0 ) )
 			newLines.addAll( buff.Split( ps.getAlign(),
 					                     ps.GetTextWidht( false ), 
 					                     reduceFreeLinesCounter ? linesLeft : -1 ) );
@@ -344,7 +347,7 @@ public class TextFormatter {
 		
 		// add footnote decoration to the last text line
 		currLine.InsertDecor( Decor.DeCmd.DCS_FNOTE, currLine.GetLength(), fnote );
-		currLine.AddPline( ParaLine.PrepareString( String.format( "%d)", fnote.getNoteID() ) ) );
+		currLine.AddPline( ParaLine.PrepareString( String.format( " %d)", fnote.getNoteID() ) ) );
 		currLine.InsertDecor( DeCmd.DCE_FNOTE, currLine.GetLength(), null );
 		log.info( currLine.toString() );
 		
@@ -480,299 +483,310 @@ public class TextFormatter {
 			
 		switch ( cmd ) {
 		
-		case "size" :
-			params = GetCmdParams( str, "size", new Class[] { Integer.class, Integer.class } );
-			int w, h;
+		  case "size" :
+		    params = GetCmdParams( str, "size", new Class[] { Integer.class, Integer.class } );
+		    int w, h;
 			
-			try {
-				w = Integer.parseInt( params.get( 0 ) );
-				h = Integer.parseInt( params.get( 1 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Invalid parameters for size command." );
-				return null;
-			}
+		    try {
+		      w = Integer.parseInt( params.get( 0 ) );
+		      h = Integer.parseInt( params.get( 1 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Invalid parameters for size command." );
+  				return null;
+  			}
+  			
+  			if ( h <= 0 || w <= 10 ) {
+  				log.severe( String.format( "Invalid page size W x H [%d][%d]",
+  								           w, h ) );
+  				return null;
+  			}
+  			
+  			newPSet = currPSet.Copy();
 			
-			if ( h <= 0 || w <= 10 ) {
-				log.severe( String.format( "Invalid page size W x H [%d][%d]",
-								           w, h ) );
-				return null;
-			}
-				
-			if ( h != height ||
-				 ( w != width && w > fnWidth ) ) {
-					
-				height = h;
-				width = w;
-				
-				newPage = true;
-			}
-			else 
-				if ( w < fnWidth )
-					width = w;
+  			if ( h != height ||
+  			     ( w != currPSet.getWidth() && w > fnPSet.getWidth() ) ) {
+  					
+  				height = h;
+  				newPSet.setWidth( w );
+  				
+  				newPage = true;
+  			}
+  			else 
+  				if ( w < fnPSet.getWidth() )
+  					newPSet.setWidth( w );
+  			
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
 			
-			pCmd = ParagraphCommand.PC_END;
+  		case "align" : // align settings for the next paragraph
+  			params = GetCmdParams( str, "align", new Class[] { String.class } );
+  
+  			newPSet = currPSet.Copy();
+  			
+  			try {
+  				newPSet.setAlign( Para.PAlign.valueOf( "PA_" + params.get( 0 ).toUpperCase() ) );
+  			}
+  			catch ( IllegalArgumentException ex )
+  			{
+  				log.severe( String.format( "Invalid align [%s]!!!", params.get( 0 ) ) );
+  				return null;
+  			}
+  			
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
 			
-			break;
-			
-		case "align" : // align settings for the next paragraph
-			params = GetCmdParams( str, "align", new Class[] { String.class } );
-
-			try {
-				
-				align = Para.PAlign.valueOf( "PA_" + params.get( 0 ).toUpperCase() );
-			}
-			catch ( IllegalArgumentException ex )
-			{
-				log.severe( String.format( "Invalid align [%s]!!!", params.get( 0 ) ) );
-				return null;
-			}
-			
-			pCmd = ParagraphCommand.PC_END;
-			
-			break;
-			
-		case "par" :
-			params = GetCmdParams( str, "par", new Class[] { Integer.class, Integer.class, Integer.class } );
-			int ind, sB, sA;
-			
-			try {
-				ind = Integer.parseInt( params.get( 0 ) );
-				sB  = Integer.parseInt( params.get( 1 ) );
-				sA  = Integer.parseInt( params.get( 2 ) );
-			}
-			catch ( NumberFormatException e ) {
-				 log.severe( "Invalid parameter for PAR command! " );
-				 return null;
-			}
-
-			if ( sB < 0 || sA < 0 ) {
-				log.severe( String.format( "Invalid paragraphge settings -- indent:[%d], sB:[%d], sA:[%d]",
-							     ind, sB, sA ) );
-				return null;
-			}
-			
-			indent = ind;
-			spaces[0] = sB;
-			spaces[1] = sA;
-			
-			pCmd = ParagraphCommand.PC_END;
-			
-			break;
-			
-		case "margin" :
-			params = GetCmdParams( str, "margin", new Class[] { Integer.class, Integer.class } );
-			int mL, mR;
-			try {
-				mL = Integer.parseInt( params.get( 0 ) );
-				mR = Integer.parseInt( params.get( 1 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for margin command!!!" );
-				return null;
-			}
-			
-			if ( mL < 0 || mR < 0 || mL + mR > width ) {
-				log.severe( String.format( "Invalid margins mL[%d], mR[%d]", mL, mR ) );
-				return null;
-			}
-			margins[0] = mL;
-			margins[1] = mR;
-			
-			pCmd = ParagraphCommand.PC_END;
-			
-			break;
-			
-		case "interval" :
-			params = GetCmdParams( str, "interval", new Class[] { Integer.class } );
-			int intr;
-			try {
-				intr = Integer.parseInt( params.get( 0 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for interval command!!!");
-				return null;
-			}
-			
-			if ( intr < 1 || intr > 10 ) {	// TODO: Add constant for max interval
-				log.severe( String.format( "Invalid interval value [%d]", intr ) );
-				return null;
-			}
-			interval = intr;
-			
-			pCmd = ParagraphCommand.PC_END;
-			
-			break;
-			
-		case "feedlines" :  // feed lines into the end of the last paragraph
-						    // with intervals
-			params = GetCmdParams( str, "feedlines", new Class[] { Integer.class } );
-			try {
-				lines = Integer.parseInt( params.get( 0 ) );					
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for feedlines command!!!");
-				return null;
-			}
-
-			if ( lines < 1 ) {
-				log.severe( "Invalid number of lines for feedlines!!!" );
-				return null;
-			}	
-
-			linesToFeed = lines * interval;
-
-			pCmd = ParagraphCommand.PC_END;
-			
-			break;
-			
-		case "feed" :
-			params = GetCmdParams( str, "feed", new Class[] { Integer.class } );
-			try {
-				lines = Integer.parseInt( params.get( 0 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for feed command!!!" );
-				return null;
-			}
-
-			if ( lines < 1 ) {
-				log.severe( "Invalid number of lines for feed!!!" );
-				return null;
-			}
-			
-			linesToFeed = lines;
-
-			pCmd = ParagraphCommand.PC_END;
-			
-			break;
-			
-		case "newpage" :			
-			newPage = true;	
-
-			break;
-			
-		case "left" :
-			params = GetCmdParams( str, "left", new Class[] { Integer.class } );
-			try {
-				lines = Integer.parseInt( params.get( 0 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for left command!!!" );
-				return null;
-			}
-
-			if ( lines < 1 ) {
-				log.severe( "Invalid number of lines for left command!!!" );
-				return null;
-			}
-			
-			if ( linesLeft <= lines )
-				newPage = true;
-
-			break;
-			
-		case "header" :
-			params = GetCmdParams( str, "header", new Class[] { Integer.class, Integer.class, String.class } );
-			int hHeight, hLine;
-			try {
-				hHeight = Integer.parseInt( params.get( 0 ) );
-				hLine   = Integer.parseInt( params.get( 1 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for header command!!!");
-				return null;
-			}
-			
-			if ( hHeight < 0 || 
-				 hHeight > height || 
-				 hLine > hHeight ||
-				 hHeight > 10 ) {	// TODO: Add max header height constant
-				
-				log.severe( String.format( "Invalid header height [%d]", hHeight ) );
-				return null;
-			}
-			try {
-				headerAlign = Para.PAlign.valueOf( "PA_" + params.get( 2 ).toUpperCase() );
-			}
-			catch ( IllegalArgumentException ex ) {
-				log.severe( String.format( "Invalid page header align [%s]!", params.get( 2 ) ) );
-				return null;
-			}
-			
-			headerHeight = hHeight;
-			headerLine = hHeight <= hLine ? hHeight - 1 : hLine;
-		
-			SetHeader();
-
-			break;
-			
-		case "pnum" :
-			params = GetCmdParams( str, "pnum", new Class[] { Integer.class } );
-			int pNum;
-			try {
-				pNum = Integer.parseInt( params.get( 0 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for pnum command!!!" );
-				return null;
-			}
-			if ( pNum < 1 ) {
-				log.severe( String.format( "Invalid page number [%d]", pNum ) );
-				return null;
-			}
-			
-			PageNum = pNum;
-			SetHeader();
-			
-			break;
-			
-		case "pb" :			
-			pCmd = ParagraphCommand.PC_END;
-			
-			break;
-			
-		case "footnote" :
-			params = GetCmdParams( str, "footnote", new Class[] { Integer.class } );
-			int fnNum;
-			try {
-				fnNum = Integer.parseInt( params.get( 0 ) );
-			}
-			catch ( NumberFormatException e ) {
-				log.severe( "Casting error for footnote command!!!" );
-				return null;
-			}
-
-			if ( fnNum < 1 ) {
-				log.severe( String.format( "Invalid footnote lines number [%d]", fnNum ) );
-				return null;
-			}
-			
-			fnLines = fnNum;
-
-			break;
-			
-		case "alias" :
-			String sNew, sOld;
-			
-			params = GetCmdParams( str, "alias", new Class[0] );
-			if ( params.size() == 0 ) {
-				SetAlias( "", "" );
-				break;
-			}
-			else
-				if ( params.size() == 1 || params.get( 0 ).length() == 0 )
-					sOld = " ";
-				else
-					sOld = params.get( 1 );
-			
-				sNew = params.get( 0 );
-			
-			SetAlias( sNew, sOld );
-			
-			break;				
+  		case "par" :
+  			params = GetCmdParams( str, "par", new Class[] { Integer.class, Integer.class, Integer.class } );
+  			int ind, sB, sA;
+  						
+  			try {
+  				ind = Integer.parseInt( params.get( 0 ) );
+  				sB  = Integer.parseInt( params.get( 1 ) );
+  				sA  = Integer.parseInt( params.get( 2 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				 log.severe( "Invalid parameter for PAR command! " );
+  				 return null;
+  			}
+  
+  			if ( sB < 0 || sA < 0 ) {
+  				log.severe( String.format( "Invalid paragraphge settings -- indent:[%d], sB:[%d], sA:[%d]",
+  							     ind, sB, sA ) );
+  				return null;
+  			}
+  
+  			newPSet = currPSet.Copy();
+  			
+  			newPSet.setIndent( ind );
+  			newPSet.setSpaces( new int[] { sB, sA } );
+  			
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
+  			
+  		case "margin" :
+  		  
+  			params = GetCmdParams( str, "margin", new Class[] { Integer.class, Integer.class } );
+  			int mL, mR;
+  			try {
+  				mL = Integer.parseInt( params.get( 0 ) );
+  				mR = Integer.parseInt( params.get( 1 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for margin command!!!" );
+  				return null;
+  			}
+  			
+  			if ( mL < 0 || mR < 0 || mL + mR > currPSet.getWidth() ) {
+  				log.severe( String.format( "Invalid margins mL[%d], mR[%d]", mL, mR ) );
+  				return null;
+  			}
+  			
+  			newPSet = currPSet.Copy();
+  			newPSet.setMargins( new int[] { mL, mR } );
+  			
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
+  			
+  		case "interval" :
+  		  
+  			params = GetCmdParams( str, "interval", new Class[] { Integer.class } );
+  			int intr;
+  			try {
+  				intr = Integer.parseInt( params.get( 0 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for interval command!!!");
+  				return null;
+  			}
+  			
+  			if ( intr < 1 || intr > 10 ) {	// TODO: Add constant for max interval
+  				log.severe( String.format( "Invalid interval value [%d]", intr ) );
+  				return null;
+  			}
+  			
+  			newPSet = currPSet.Copy();
+  			newPSet.setInterval( intr );
+  			
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
+  			
+  		case "feedlines" :  // feed lines into the end of the last paragraph
+  						            // with intervals
+  			params = GetCmdParams( str, "feedlines", new Class[] { Integer.class } );
+  			try {
+  				lines = Integer.parseInt( params.get( 0 ) );					
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for feedlines command!!!");
+  				return null;
+  			}
+  
+  			if ( lines < 1 ) {
+  				log.severe( "Invalid number of lines for feedlines!!!" );
+  				return null;
+  			}	
+  
+  			linesToFeed = lines * currPSet.getInterval() ;
+  
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
+  			
+  		case "feed" :   // feed lines with no interval
+  		 
+  			params = GetCmdParams( str, "feed", new Class[] { Integer.class } );
+  			try {
+  				lines = Integer.parseInt( params.get( 0 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for feed command!!!" );
+  				return null;
+  			}
+  
+  			if ( lines < 1 ) {
+  				log.severe( "Invalid number of lines for feed!!!" );
+  				return null;
+  			}
+  			
+  			linesToFeed = lines;
+  
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
+  			
+  		case "newpage" :			
+  			newPage = true;	
+  
+  			break;
+  			
+  		case "left" :
+  			params = GetCmdParams( str, "left", new Class[] { Integer.class } );
+  			try {
+  				lines = Integer.parseInt( params.get( 0 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for left command!!!" );
+  				return null;
+  			}
+  
+  			if ( lines < 1 ) {
+  				log.severe( "Invalid number of lines for left command!!!" );
+  				return null;
+  			}
+  			
+  			if ( linesLeft <= lines )
+  				newPage = true;
+  
+  			break;
+  			
+  		case "header" :
+  			params = GetCmdParams( str, "header", new Class[] { Integer.class, Integer.class, String.class } );
+  			int hHeight, hLine;
+  			try {
+  				hHeight = Integer.parseInt( params.get( 0 ) );
+  				hLine   = Integer.parseInt( params.get( 1 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for header command!!!");
+  				return null;
+  			}
+  			
+  			if ( hHeight < 0 || 
+  				 hHeight > height || 
+  				 hLine > hHeight ||
+  				 hHeight > 10 ) {	// TODO: Add max header height constant
+  				
+  				log.severe( String.format( "Invalid header height [%d]", hHeight ) );
+  				return null;
+  			}
+  			try {
+  				headerAlign = Para.PAlign.valueOf( "PA_" + params.get( 2 ).toUpperCase() );
+  			}
+  			catch ( IllegalArgumentException ex ) {
+  				log.severe( String.format( "Invalid page header align [%s]!", params.get( 2 ) ) );
+  				return null;
+  			}
+  			
+  			headerHeight = hHeight;
+  			headerLine = hHeight <= hLine ? hHeight - 1 : hLine;
+  		
+  			SetHeader();
+  
+  			break;
+  			
+  		case "pnum" :
+  			params = GetCmdParams( str, "pnum", new Class[] { Integer.class } );
+  			int pNum;
+  			try {
+  				pNum = Integer.parseInt( params.get( 0 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for pnum command!!!" );
+  				return null;
+  			}
+  			if ( pNum < 1 ) {
+  				log.severe( String.format( "Invalid page number [%d]", pNum ) );
+  				return null;
+  			}
+  			
+  			PageNum = pNum;
+  			SetHeader();
+  			
+  			break;
+  			
+  		case "pb" :			
+  			pCmd = ParagraphCommand.PC_END;
+  			
+  			break;
+  			
+  		case "footnote" :
+  			params = GetCmdParams( str, "footnote", new Class[] { Integer.class } );
+  			int fnNum;
+  			try {
+  				fnNum = Integer.parseInt( params.get( 0 ) );
+  			}
+  			catch ( NumberFormatException e ) {
+  				log.severe( "Casting error for footnote command!!!" );
+  				return null;
+  			}
+  
+  			if ( fnNum < 1 ) {
+  				log.severe( String.format( "Invalid footnote lines number [%d]", fnNum ) );
+  				return null;
+  			}
+  			
+  			fnLines = fnNum;
+  
+  			break;
+  			
+  		case "alias" :
+  			String sNew, sOld;
+  			
+  			params = GetCmdParams( str, "alias", new Class[0] );
+  			if ( params.size() == 0 ) {
+  				SetAlias( "", "" );
+  				break;
+  			}
+  			else
+  				if ( params.size() == 1 || params.get( 0 ).length() == 0 )
+  					sOld = " ";
+  				else
+  					sOld = params.get( 1 );
+  			
+  				sNew = params.get( 0 );
+  			
+  			SetAlias( sNew, sOld );
+  			
+  			break;				
 		}
-			
+		
+		pCmd = ParagraphCommand.PC_SNTC_END;
 			
 		return null; 
 	}
@@ -795,19 +809,19 @@ public class TextFormatter {
 			
 			if ( l == headerLine - 1 ) {
 				
-				pl = new ParaLine( width );
+				pl = new ParaLine( fnPSet.getWidth() );
 				pl.AddString( sNum, new Decor[0] );
-				switch ( align ) {
+				switch ( currPSet.getAlign() ) {
 					case PA_LEFT :
-						pl.Pad( Para.PAlign.PA_RIGHT, ' ', width - pl.GetLength() );
+						pl.Pad( Para.PAlign.PA_RIGHT, ' ', fnPSet.getWidth() - pl.GetLength() );
 						break;
 						
 					case PA_RIGHT :
-						pl.Pad( Para.PAlign.PA_LEFT, ' ', width - pl.GetLength() );
+						pl.Pad( Para.PAlign.PA_LEFT, ' ', fnPSet.getWidth() - pl.GetLength() );
 						break;
 						
 					default : 
-						pl.Pad( Para.PAlign.PA_CENTER, ' ', width - pl.GetLength() );
+						pl.Pad( Para.PAlign.PA_CENTER, ' ', fnPSet.getWidth() - pl.GetLength() );
 						break;
 				}
 				
@@ -819,11 +833,11 @@ public class TextFormatter {
 				     headerHeight > 1 && 
 				     headerLine != headerHeight ) {
 					
-					pl = new ParaLine( width );
-					pl.Pad( Para.PAlign.PA_LEFT, '=', width );
+					pl = new ParaLine( fnPSet.getWidth() );
+					pl.Pad( Para.PAlign.PA_LEFT, '=', fnPSet.getWidth() );
 				}
 				else {
-					pl = new ParaLine( width );
+					pl = new ParaLine( fnPSet.getWidth() );
 					pl.AddString( "  ", new Decor[0] );
 				}
 	

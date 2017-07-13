@@ -8,11 +8,7 @@
 ********************************************************/
 package textformatter;
 
-import lombok.*;
 
-class Page {
-	
-}
 
 /*
 import java.util.ArrayList;

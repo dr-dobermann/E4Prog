@@ -163,7 +163,7 @@ class Decor
 	 * @param newPos  -- new position inside a new owner
 	 * @throws TFException
 	 */
-	public Decor SetLine(ParaLine newPL, int newPos) {
+	public Decor SetLine( ParaLine newPL, int newPos ) {
 
 		line = newPL;
 		
@@ -312,7 +312,7 @@ class ParaLine {
 	 * 
 	 * @return New ParaLine consists the tail of the original ParaLine
 	 */
-	public ParaLine DropTail( int length ) {
+/*	public ParaLine DropTail( int length ) {
 		
 		if ( length > buff.length() ) {
 			log.severe( "[DropTail] The tail length is bigger than the actual line length!!!" );
@@ -325,21 +325,23 @@ class ParaLine {
 		pl.buff.append(buff.substring(buff.length() - length, buff.length()));
 		
 		// sends the related decoration commands as well
-		for ( Decor dec : decors )
-			if ( dec.getPos() >= buff.length() - length )
-				dec.SetLine(pl, dec.getPos() - length + 1);
+		if ( decors != null )
+  		for ( Decor dec : decors )
+  			if ( dec.getPos() >= buff.length() - length )
+  				dec.SetLine(pl, dec.getPos() - length + 1);
 		
 		// delete the tail
 		buff.delete(buff.length() - length, buff.length());
 		
 		// delete the related decoration commands as well
-		for ( int d = 0; d < decors.size(); d++ )
-			if ( decors.get(d).getLine() != this )
-				decors.remove(d);
+		if ( decors != null )
+  		for ( int d = 0; d < decors.size(); d++ )
+  			if ( decors.get(d).getLine() != this )
+  				decors.remove(d);
 		
 		return pl;
 	}
-	
+*/	
 	/**
 	 * Cuts the begin of the ParaLine and returns it as a new ParaLine
 	 * The rest of the initial one is kept in old ParaLine
@@ -352,6 +354,7 @@ class ParaLine {
 	public ParaLine CutHead( int length ) {
 		
 		ParaLine pl = new ParaLine( width );
+		
 		if ( length == 0 )
 			return pl;
 		
@@ -360,14 +363,14 @@ class ParaLine {
 			return null;
 		}
 		
-		pl.buff.append(buff.substring(0, length));
+		pl.buff.append( buff.substring( 0, length ) );
 
 		if ( decors != null ) {
 			
 			ArrayList<Decor> newDecors = new ArrayList<>();
 
 			for ( Decor d : decors )
-				if ( d.getPos() < length ) 
+				if ( d.getPos() <= length ) 
 					pl.InsertDecor( d.getCmd(), d.getPos(), d.getData() );
 				else
 					newDecors.add( new Decor( d.getCmd(), d.getPos() - length, d.getData() ) ); 
@@ -551,10 +554,11 @@ class ParaLine {
 		
 		buff.append( str );
 		
-		decors.addAll(Arrays.stream( NewDecors )
-						    .map( d -> d.SetLine( this, d.getPos() + shift ) )
-						    .collect( Collectors.toList() )
-					 );
+		if ( decors != null && NewDecors != null && NewDecors.length > 0 )
+  		decors.addAll(Arrays.stream( NewDecors )
+  						    .map( d -> d.SetLine( this, d.getPos() + shift ) )
+  						    .collect( Collectors.toList() )
+  					 );
 	}
 	
 	/**
@@ -567,17 +571,16 @@ class ParaLine {
 	 */
 	public ParaLine AddPline( ParaLine pl ) {
 		
-		int shift = width;
+		int shift = this.GetLength();
 		
-		width = width + pl.getWidth() > width ? width + pl.getWidth() : width;
-		
+		width += pl.getWidth();
 		
 		buff.append( pl.buff );
 
 //		for ( Decor d : pl.decors )
 //			decors.add( new Decor( d.getCmd(), d.getPos() + shift, d.getData() ) );
 
-		if ( decors != null )
+		if ( decors != null && pl.decors != null )
 			decors.addAll( pl.decors.stream()
 									 .map( d -> d.SetLine( this, d.getPos() + shift ) )
 									 .collect( Collectors.toList() ) );
@@ -828,10 +831,11 @@ class ParaLine {
 			return pl.AddPline( this.CutHead( len ) );
 		
 		pl.AddPline( this.CutHead( maxDelPos ) );
-		
 		pl.Align( paFill, len );
-		
 		pl.Trim( TrimSide.TS_LEFT );
+		
+		if ( this.buff.length() == 0 )
+		  this.Clear();
 		
 		return pl;
 	}
