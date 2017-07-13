@@ -128,10 +128,9 @@ public class TextFormatter {
 		
 		//remove empty lines if alignment isn't set to PA_AS_IS
 		if ( pl.GetLength() == 0 ) {
+		  
 			if ( currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
-			  
-			  nonEmptyLinescount = 0;
-			  
+			  			  
 				if ( ++emptyLinesCount > 1 ) {  // if there is more than 1 empty lines in a row, close the paragraph
 					pCmd = ParagraphCommand.PC_END;
 					newPSet = currPSet.Copy();
@@ -143,15 +142,18 @@ public class TextFormatter {
 						                                   currPSet,
 						                                   true,
 						                                   nonEmptyLinescount == 0 ) );
-						nonEmptyLinescount = lines.size();
 					}
 				}
-				
+
+        nonEmptyLinescount = 0;
+
 				return lines.stream();
 			}
 			else { 
-					if ( linesLeft > 0 )
+					if ( linesLeft-- > 0 )
 						lines.add( pl );
+					
+					firstLineOnPage = false;
 					
 					return lines.stream();
 				}
@@ -175,12 +177,23 @@ public class TextFormatter {
 						
 			if ( currLine.GetLength() > 0 && linesLeft > 0 )
 				lines.addAll( PushLinesFromBuffer( currLine, currPSet, true, nonEmptyLinescount == 0 ) );
+
 			
-			// add spaces after the current paragraph
-			if ( lines.size() > 0 )
-				lines.addAll( AddEmptyLines( currPSet.getSpaces()[1]) );
-			
-			pCmd = ParagraphCommand.PC_BEGIN;
+	    // addition spaces before a new paragraph
+	    // shouldn't be made before the first line on the page
+	    if ( lines.size() > 0 &&
+	        !firstLineOnPage &&
+	        currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
+	      
+	      lines.addAll( 0, AddEmptyLines( currPSet.getSpaces()[0] ) );
+	    }
+	     
+      // add spaces after the current paragraph
+      if ( lines.size() > 0 )
+        lines.addAll( AddEmptyLines( currPSet.getSpaces()[1]) );
+	    pCmd = ParagraphCommand.PC_NONE;
+	    
+			firstLineOnPage = false;
 			currPSet = newPSet;
 			nonEmptyLinescount = 0;
 		}
@@ -204,23 +217,61 @@ public class TextFormatter {
 			
 		}
 		else { 
-			lines.add( pl );
-			
-			nonEmptyLinescount++;
+		  if ( linesLeft-- > 0 )
+		    lines.add( pl );
+		  
+		  return lines.stream();
 		}
-
-    // addition spaces before a new paragraph
-    // shouldn't be made before the first line on the page
-    if ( pCmd == ParagraphCommand.PC_BEGIN &&
-       lines.size() > 0 &&
-       !firstLineOnPage &&
-       currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
-      
-      lines.addAll( 0, AddEmptyLines( currPSet.getSpaces()[0] ) );
-      pCmd = ParagraphCommand.PC_NONE;
-    }
 		
-		firstLineOnPage = false;
+		if ( newPage || linesLeft <= 0 ) {
+		  // flush footnotes onto the page
+		  lines.addAll( footnotes );
+		  
+		  // add page break decoration on the last line on page
+		  if ( lines.size() == 0 )
+		    lines.add( ParaLine.PrepareString( "" ) );
+		  
+		  ParaLine pel = lines.get( lines.size() - 1 );
+		  
+		  pel.InsertDecor( DeCmd.DCS_PAGE_END, pel.GetLength(), PageNum );
+		  pel.InsertDecor( DeCmd.DCE_PAGE_END, pel.GetLength(), null );
+		  
+		  
+		  if ( headerHeight > 0 ) {
+		    // flush page header if it exists
+		    lines.addAll( header );
+		  
+		    // make header for next page
+		    SetHeader();
+		    
+		  }
+		  
+      // reset the free lines counter 
+      linesLeft = height - headerHeight;
+      newPage = false;
+      firstLineOnPage = true;
+      nonEmptyLinescount = 0;
+      emptyLinesCount = 0;
+
+      if ( pl.GetLength() > 0 ) {
+		    
+        currLine.AddPline( pl );
+
+		    // push all full lines from the buffer until the buffer length
+	      // would be less than the current paragraph width
+	      while ( --linesLeft > 0 && 
+	              currLine.GetLength() > currPSet.GetTextWidht( nonEmptyLinescount == 0 ) ) {
+	        
+	        lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
+	                                              currPSet.GetTextWidht( nonEmptyLinescount++ == 0 ) ) );
+	        currLine.Trim( TrimSide.TS_LEFT );
+	        firstLineOnPage = false;
+	      }
+		  }
+		  
+		}
+		else
+		  firstLineOnPage = false;
 		
 		return lines.stream();
 	}
@@ -785,9 +836,7 @@ public class TextFormatter {
   			
   			break;				
 		}
-		
-		pCmd = ParagraphCommand.PC_SNTC_END;
-			
+					
 		return null; 
 	}
 

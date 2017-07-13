@@ -44,9 +44,10 @@ class Decor
 						DCS_UNDERLINE,   DCE_UNDERLINE,
 						DCS_UPIDX,       DCE_UPIDX,
 						DCS_DNIDX,       DCE_DNIDX,
-						DCS_FNOTE,       DCE_FNOTE;
+						DCS_FNOTE,       DCE_FNOTE,
+						DCS_PAGE_END,    DCE_PAGE_END;
 		
-		public DeCmd GetOpposite( DeCmd dec ) {
+		public DeCmd GetOpposite( DeCmd dec ) {   // TODO: Refactor it with ValueOf and regexps
 			switch ( dec ) {
 				case DCS_BOLD      : return DCE_BOLD;
 				case DCS_ITALIC    : return DCE_ITALIC;
@@ -54,6 +55,7 @@ class Decor
 				case DCS_UPIDX     : return DCE_UPIDX;
 				case DCS_DNIDX     : return DCE_DNIDX;
 				case DCS_FNOTE     : return DCE_FNOTE;
+				case DCS_PAGE_END  : return DCE_PAGE_END;
 				
 				case DCE_BOLD      : return DCS_BOLD;
 				case DCE_ITALIC    : return DCS_ITALIC;
@@ -61,6 +63,7 @@ class Decor
 				case DCE_UPIDX     : return DCS_UPIDX;
 				case DCE_DNIDX     : return DCS_DNIDX;
 				case DCE_FNOTE     : return DCS_FNOTE;
+        case DCE_PAGE_END  : return DCS_PAGE_END;
 			}
 			return dec;
 			
