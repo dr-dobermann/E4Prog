@@ -151,68 +151,8 @@ public class TextFormatter {
 
     // close page if needed
     if ( newPage || linesLeft <= 0 ) {
-      // flush footnotes onto the page
-      lines.addAll( footnotes );
-      footnotes.clear();
-      if ( nextPageFNotes.size() > 0 ) {
-        footnotes.addAll( nextPageFNotes );
-        nextPageFNotes.clear();
-      }
       
-      // add page break decoration on the last line on page
-      if ( lines.size() == 0 )
-        lines.add( ParaLine.PrepareString( "" ) );
-      
-      ParaLine pel = lines.get( lines.size() - 1 );
-      
-      pel.InsertDecor( DeCmd.DCS_PAGE_END, pel.GetLength(), PageNum );
-      pel.InsertDecor( DeCmd.DCE_PAGE_END, pel.GetLength(), null );
-      
-      
-      if ( headerHeight > 0 ) {
-        // flush page header if it exists
-        lines.addAll( header );
-      
-        // make header for next page
-        SetHeader();
-      }
-      else
-        GetPageNum();
-      
-      // reset a free lines counter 
-      linesLeft = height - headerHeight;
-      newPage = false;
-      firstLineOnPage = true;
-      nonEmptyLinescount = 0;
-      emptyLinesCount = 0;
-      if ( currPSet.getAlign() != PAlign.PA_AS_IS ) {
-        
-        if ( pCmd == ParagraphCommand.PC_END )
-          currPSet = newPSet;
-        
-        pCmd = ParagraphCommand.PC_NONE;
-  
-        if ( pl.GetLength() > 0 ) {
-          
-          currLine.AddPline( pl );
-  
-          // push all full lines from the buffer until the buffer length
-          // would be less than the current paragraph width
-          while ( linesLeft > 0 && 
-                  currLine.GetLength() > currPSet.GetTextWidht( nonEmptyLinescount == 0 ) ) {
-            
-            lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
-                                                  currPSet.GetTextWidht( nonEmptyLinescount++ == 0 ) ) );
-            currLine.Trim( TrimSide.TS_LEFT );
-            linesLeft--;
-            firstLineOnPage = false;
-          }
-        }
-      }
-      else {
-        lines.add( pl );
-        linesLeft--;
-      }
+      lines.addAll( ClosePage( pl, true ) );
       
       return lines.stream();
     }
@@ -322,8 +262,89 @@ public class TextFormatter {
 		
 		return lines.stream();
 	}
-	
+
 	/**
+	 * Closes current page and starts a new one if needed
+	 * 
+	 * @param pl           -- current ParaLine from the lines stream
+	 * @param startNewPage -- starts a new page if true
+	 * 
+	 * @return a lines array with lines finished current page and 
+	 *         a new one if created
+	 */
+	private ArrayList<ParaLine> ClosePage( ParaLine pl, boolean startNewPage ) {
+
+	  ArrayList<ParaLine> lines = new ArrayList<>();
+
+    // flush footnotes onto the page
+    lines.addAll( footnotes );
+    footnotes.clear();
+    if ( nextPageFNotes.size() > 0 ) {
+      footnotes.addAll( nextPageFNotes );
+      nextPageFNotes.clear();
+    }
+      
+    // add page break decoration on the last line on page
+    if ( lines.size() == 0 )
+      lines.add( ParaLine.PrepareString( "" ) );
+      
+    ParaLine pel = lines.get( lines.size() - 1 );
+      
+    pel.InsertDecor( DeCmd.DCS_PAGE_END, pel.GetLength(), PageNum );
+    pel.InsertDecor( DeCmd.DCE_PAGE_END, pel.GetLength(), null );
+      
+    // flush page header if it exists  
+    if ( startNewPage && headerHeight > 0 ) {
+      lines.addAll( header );
+      
+      // make header for next page
+      SetHeader();
+    }
+    else
+      GetPageNum();
+      
+    // reset a free lines counter 
+    linesLeft = height - headerHeight;
+    newPage = false;
+    firstLineOnPage = true;
+    nonEmptyLinescount = 0;
+    emptyLinesCount = 0;
+    
+    if ( currPSet.getAlign() != PAlign.PA_AS_IS ) {
+        
+      if ( pCmd == ParagraphCommand.PC_END )
+        currPSet = newPSet;
+        
+      pCmd = ParagraphCommand.PC_NONE;
+  
+      if ( pl.GetLength() > 0 ) {
+          
+        currLine.AddPline( pl );
+  
+        // push all full lines from the buffer until the buffer length
+        // would be less than the current paragraph width
+        while ( linesLeft > 0 && 
+                currLine.GetLength() > currPSet.GetTextWidht( nonEmptyLinescount == 0 ) ) {
+            
+        lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
+                                              currPSet.GetTextWidht( nonEmptyLinescount++ == 0 ) ) );
+        currLine.Trim( TrimSide.TS_LEFT );
+        linesLeft--;
+        firstLineOnPage = false;
+          }
+        }
+    }
+    else {
+      if ( pl != null ) {
+        lines.add( pl );
+        linesLeft--;
+      }
+    }
+	  
+    return lines;
+  }
+
+  /**
 	 * Pushes given buffer into list of lines
 	 * 
 	 * @param buff

@@ -378,16 +378,7 @@ class ParaLine {
 		decors.clear();
 
 		decors.addAll( newDecors );
-		
-					
-//		if ( decors != null)
-//			decors.stream()
-//				.filter( d -> d.getPos() < length )
-//				.forEach( d -> {
-//					pl.InsertDecor( d.getCmd(), d.getPos(), d.getData() );
-//					decors.remove( d );
-//				});
-		
+
 		buff.delete( 0, length );
 		
 		return pl;
@@ -404,7 +395,7 @@ class ParaLine {
 	 * @return the rest of new ParaLine. it might have a zero length
 	 */
 	public ParaLine JoinLine( ParaLine pl ) {  // TODO: Check if it could be rewritten in more efficient way
-		                                       // by using massive operations instead of single ones
+		                                         // by using massive operations instead of single ones
 		
 		if ( pl.GetLength() == 0 )
 			return new ParaLine( 0 );
@@ -571,15 +562,15 @@ class ParaLine {
 	 * @return concatenated ParaLine
 	 */
 	public ParaLine AddPline( ParaLine pl ) {
+	  
+	  if ( pl == null )
+	    return this;
 		
 		int shift = this.GetLength();
 		
 		width += pl.getWidth();
 		
 		buff.append( pl.buff );
-
-//		for ( Decor d : pl.decors )
-//			decors.add( new Decor( d.getCmd(), d.getPos() + shift, d.getData() ) );
 
 		decors.addAll( pl.decors.stream()
 		                        .map( d -> d.SetLine( this, d.getPos() + shift ) )
