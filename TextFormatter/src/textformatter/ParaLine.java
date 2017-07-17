@@ -307,44 +307,6 @@ class ParaLine {
 	}
 	
 	/**
-	 * Drops out tailing symbols into new ParaLine
-	 * These symbols are removed from the original ParaLine
-	 * 
-	 * @param length -- length of the tail to drop off
-	 * 
-	 * @return New ParaLine consists the tail of the original ParaLine
-	 */
-/*	public ParaLine DropTail( int length ) {
-		
-		if ( length > buff.length() ) {
-			log.severe( "[DropTail] The tail length is bigger than the actual line length!!!" );
-			return null;
-		}
-		
-		ParaLine pl = new ParaLine( width );
-		
-		// send the tail to a new ParaLine
-		pl.buff.append(buff.substring(buff.length() - length, buff.length()));
-		
-		// sends the related decoration commands as well
-		if ( decors != null )
-  		for ( Decor dec : decors )
-  			if ( dec.getPos() >= buff.length() - length )
-  				dec.SetLine(pl, dec.getPos() - length + 1);
-		
-		// delete the tail
-		buff.delete(buff.length() - length, buff.length());
-		
-		// delete the related decoration commands as well
-		if ( decors != null )
-  		for ( int d = 0; d < decors.size(); d++ )
-  			if ( decors.get(d).getLine() != this )
-  				decors.remove(d);
-		
-		return pl;
-	}
-*/	
-	/**
 	 * Cuts the begin of the ParaLine and returns it as a new ParaLine
 	 * The rest of the initial one is kept in old ParaLine
 	 * The relevant decorations are also going to the new ParaLine
@@ -606,15 +568,6 @@ class ParaLine {
 	 */
 	public List<Decor> GetDecorsAt( int pos ) {
 				
-//		List<Decor> dl = new ArrayList<Decor>();
-//		
-//		
-//		for ( Decor dec : decors )
-//			if ( dec.getPos() == pos )
-//				dl.add( dec );
-//		
-//		return dl.toArray(new Decor[0]);
-		
 		return decors.stream()
 				.filter( d -> d.getPos() == pos )
 				.collect( Collectors.toList() );
@@ -746,23 +699,8 @@ class ParaLine {
 		return pl;
 		
 	}
-	
-	/**
-	 * Creates new empty ParaLine with command decoration in it
-	 * 
-	 * @param cmd -- related command decoration
-	 * 
-	 * @return ParaLine with 0 length with cmd Command decoration in it
-	 */
-/*	public static ParaLine CreateCmdPLine( Command cmd ) {
-		
-		ParaLine pl = new ParaLine(0);
-		
-		pl.InsertDecor( Decor.DeCmd.DCE_CMD, 0, cmd);
-		
-		return pl;
-	}
-*/	
+
+
 	@Override
 	public String toString() {
 		
