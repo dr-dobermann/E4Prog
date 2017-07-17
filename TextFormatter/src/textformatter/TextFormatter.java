@@ -106,6 +106,29 @@ public class TextFormatter {
 					.map( l -> ParaLine.PrepareString( l ) )
 					.flatMap( l -> ProcessLine( l ) )
 					.forEach( line -> System.out.println( line.toString() ) );
+				
+				  ArrayList<ParaLine> lines = new ArrayList<>();
+				  
+				  // finish all unfinished lines
+				  // TODO: Control the line counter
+				  if ( currLine.GetLength() > 0 ) {
+				    if ( currPSet.getAlign() == PAlign.PA_AS_IS )
+				      lines.add( currLine );
+				    else
+				      lines.addAll( PushLinesFromBuffer( currLine, currPSet, false, !firstLineOnPage ) );
+				  }
+				    
+				  if ( currFNote.GetLength() > 0 || footnotes.size() > 0 ) {
+				    if ( footnotes.size() == 0 )
+				      footnotes.add( GetDividerLine( fnPSet, '-') );
+				    
+				    footnotes.addAll( PushLinesFromBuffer( currFNote, fnPSet, false, true) );
+				    
+				    lines.addAll( footnotes );
+				  }
+				    
+	          lines.forEach( line -> System.out.println( line.toString() ) );
+
 			} catch ( IOException ex ) {
 				ex.printStackTrace();
 			}
@@ -125,6 +148,74 @@ public class TextFormatter {
 	Stream<ParaLine> ProcessLine( ParaLine pl ) {
 		
 		ArrayList<ParaLine> lines = new ArrayList<>();
+
+    // close page if needed
+    if ( newPage || linesLeft <= 0 ) {
+      // flush footnotes onto the page
+      lines.addAll( footnotes );
+      footnotes.clear();
+      if ( nextPageFNotes.size() > 0 ) {
+        footnotes.addAll( nextPageFNotes );
+        nextPageFNotes.clear();
+      }
+      
+      // add page break decoration on the last line on page
+      if ( lines.size() == 0 )
+        lines.add( ParaLine.PrepareString( "" ) );
+      
+      ParaLine pel = lines.get( lines.size() - 1 );
+      
+      pel.InsertDecor( DeCmd.DCS_PAGE_END, pel.GetLength(), PageNum );
+      pel.InsertDecor( DeCmd.DCE_PAGE_END, pel.GetLength(), null );
+      
+      
+      if ( headerHeight > 0 ) {
+        // flush page header if it exists
+        lines.addAll( header );
+      
+        // make header for next page
+        SetHeader();
+      }
+      else
+        GetPageNum();
+      
+      // reset a free lines counter 
+      linesLeft = height - headerHeight;
+      newPage = false;
+      firstLineOnPage = true;
+      nonEmptyLinescount = 0;
+      emptyLinesCount = 0;
+      if ( currPSet.getAlign() != PAlign.PA_AS_IS ) {
+        
+        if ( pCmd == ParagraphCommand.PC_END )
+          currPSet = newPSet;
+        
+        pCmd = ParagraphCommand.PC_NONE;
+  
+        if ( pl.GetLength() > 0 ) {
+          
+          currLine.AddPline( pl );
+  
+          // push all full lines from the buffer until the buffer length
+          // would be less than the current paragraph width
+          while ( linesLeft > 0 && 
+                  currLine.GetLength() > currPSet.GetTextWidht( nonEmptyLinescount == 0 ) ) {
+            
+            lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
+                                                  currPSet.GetTextWidht( nonEmptyLinescount++ == 0 ) ) );
+            currLine.Trim( TrimSide.TS_LEFT );
+            linesLeft--;
+            firstLineOnPage = false;
+          }
+        }
+      }
+      else {
+        lines.add( pl );
+        linesLeft--;
+      }
+      
+      return lines.stream();
+    }
 		
 		//remove empty lines if alignment isn't set to PA_AS_IS
 		if ( pl.GetLength() == 0 ) {
@@ -177,25 +268,29 @@ public class TextFormatter {
 						
 			if ( currLine.GetLength() > 0 && linesLeft > 0 )
 				lines.addAll( PushLinesFromBuffer( currLine, currPSet, true, nonEmptyLinescount == 0 ) );
-
-			
-	    // addition spaces before a new paragraph
-	    // shouldn't be made before the first line on the page
-	    if ( lines.size() > 0 &&
-	        !firstLineOnPage &&
-	        currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
-	      
-	      lines.addAll( 0, AddEmptyLines( currPSet.getSpaces()[0] ) );
-	    }
-	     
+				     
       // add spaces after the current paragraph
-      if ( lines.size() > 0 )
+      if ( !firstLineOnPage &&
+          currPSet.getAlign() != Para.PAlign.PA_AS_IS)
         lines.addAll( AddEmptyLines( currPSet.getSpaces()[1]) );
 	    pCmd = ParagraphCommand.PC_NONE;
+	    
+	    // feed empty lines if needed
+	    if ( linesToFeed > 0 && !firstLineOnPage )
+	      lines.addAll( AddEmptyLines( linesToFeed ) );
+	    
+      // addition spaces before a new paragraph
+      // shouldn't be made before the first line on the page
+      if ( !firstLineOnPage &&
+           currPSet.getAlign() != Para.PAlign.PA_AS_IS ) {
+        
+        lines.addAll( AddEmptyLines( currPSet.getSpaces()[0] ) );
+      }
 	    
 			firstLineOnPage = false;
 			currPSet = newPSet;
 			nonEmptyLinescount = 0;
+			currPSet = newPSet;
 		}
 					
 		// process usual line
@@ -223,55 +318,7 @@ public class TextFormatter {
 		  return lines.stream();
 		}
 		
-		if ( newPage || linesLeft <= 0 ) {
-		  // flush footnotes onto the page
-		  lines.addAll( footnotes );
-		  
-		  // add page break decoration on the last line on page
-		  if ( lines.size() == 0 )
-		    lines.add( ParaLine.PrepareString( "" ) );
-		  
-		  ParaLine pel = lines.get( lines.size() - 1 );
-		  
-		  pel.InsertDecor( DeCmd.DCS_PAGE_END, pel.GetLength(), PageNum );
-		  pel.InsertDecor( DeCmd.DCE_PAGE_END, pel.GetLength(), null );
-		  
-		  
-		  if ( headerHeight > 0 ) {
-		    // flush page header if it exists
-		    lines.addAll( header );
-		  
-		    // make header for next page
-		    SetHeader();
-		    
-		  }
-		  
-      // reset the free lines counter 
-      linesLeft = height - headerHeight;
-      newPage = false;
-      firstLineOnPage = true;
-      nonEmptyLinescount = 0;
-      emptyLinesCount = 0;
-
-      if ( pl.GetLength() > 0 ) {
-		    
-        currLine.AddPline( pl );
-
-		    // push all full lines from the buffer until the buffer length
-	      // would be less than the current paragraph width
-	      while ( --linesLeft > 0 && 
-	              currLine.GetLength() > currPSet.GetTextWidht( nonEmptyLinescount == 0 ) ) {
-	        
-	        lines.add( currLine.CutFormattedLine( currPSet.getAlign(), 
-	                                              currPSet.GetTextWidht( nonEmptyLinescount++ == 0 ) ) );
-	        currLine.Trim( TrimSide.TS_LEFT );
-	        firstLineOnPage = false;
-	      }
-		  }
-		  
-		}
-		else
-		  firstLineOnPage = false;
+    firstLineOnPage = false;
 		
 		return lines.stream();
 	}
@@ -340,8 +387,9 @@ public class TextFormatter {
 	}
 
 	/**
-	 * Adds empty lines to
-	 * @param i
+	 * Adds empty lines to the page
+	 * 
+	 * @param i -- empty lines count
 	 */
 	private ArrayList<ParaLine> AddEmptyLines( int i ) {
 
@@ -530,7 +578,7 @@ public class TextFormatter {
 		
 		cmd = m.group( 1 );
 		
-		log.warning( String.format( "Got command [%s]", cmd ) ); // TODO: Change log level to config
+		log.info( String.format( "Got command [%s]", cmd ) ); // TODO: Change log level to config
 			
 		switch ( cmd ) {
 		
@@ -768,6 +816,7 @@ public class TextFormatter {
   			headerLine = hHeight <= hLine ? hHeight - 1 : hLine;
   		
   			SetHeader();
+  			newPage = true;
   
   			break;
   			
@@ -860,7 +909,7 @@ public class TextFormatter {
 				
 				pl = new ParaLine( fnPSet.getWidth() );
 				pl.AddString( sNum, new Decor[0] );
-				switch ( currPSet.getAlign() ) {
+				switch ( headerAlign ) {
 					case PA_LEFT :
 						pl.Pad( Para.PAlign.PA_RIGHT, ' ', fnPSet.getWidth() - pl.GetLength() );
 						break;

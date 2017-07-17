@@ -1,4 +1,5 @@
-?align left
+?header 3 1 center
+?align right
 &B+Task description:&B-
 
 ====================
@@ -50,7 +51,6 @@ Every command starts at first position of input steam string from letter "?".
 
 
 &B+Strategy:&B-
-
 ===================
 
 1. Stream of input lines goes through few mappers|collectors and as a result
@@ -135,7 +135,7 @@ the rest of it moves to the next page.
 Footnotes ignores empty lines and counts only non-empty ones
 
 alias         new_name old_name                                          no
-Add alias for the symbol to mask it further
+Adds alias for the symbol to mask it further
 
 &B+Decoration commands:&B-
 
@@ -143,6 +143,7 @@ Add alias for the symbol to mask it further
 ?align fill
 There are could be text decoration commands presented inside the paragraph.
 They look as &<command_name>+/-. 
+
 <command_name> could consists of a few commands combined. 
 For some commands it could be possible to provide additional information in
 {} after the starting command.

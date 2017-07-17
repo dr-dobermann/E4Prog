@@ -256,7 +256,7 @@ class ParaLine {
 	private @Getter StringBuilder buff;
 	private @Getter int width;
 	
-	private @Getter List<Decor> decors = null;
+	private @Getter ArrayList<Decor> decors = new ArrayList<>();
 	
 	public ParaLine( int width ) {
 		
@@ -301,10 +301,9 @@ class ParaLine {
 			log.severe( String.format( "[ShiftDecors] Shift point [%d] is out of line bounds!!!", after ) );
 			return;
 		}
-		if ( decors != null )
-			for ( Decor dec : decors )
-				if ( dec.getPos() >= after )
-					dec.ShiftPos( shift );
+		for ( Decor dec : decors )
+			if ( dec.getPos() >= after )
+				dec.ShiftPos( shift );
 	}
 	
 	/**
@@ -368,20 +367,17 @@ class ParaLine {
 		
 		pl.buff.append( buff.substring( 0, length ) );
 
-		if ( decors != null ) {
-			
-			ArrayList<Decor> newDecors = new ArrayList<>();
+		ArrayList<Decor> newDecors = new ArrayList<>();
 
-			for ( Decor d : decors )
-				if ( d.getPos() <= length ) 
-					pl.InsertDecor( d.getCmd(), d.getPos(), d.getData() );
-				else
-					newDecors.add( new Decor( d.getCmd(), d.getPos() - length, d.getData() ) ); 
+		for ( Decor d : decors )
+			if ( d.getPos() <= length ) 
+				pl.InsertDecor( d.getCmd(), d.getPos(), d.getData() );
+			else
+				newDecors.add( new Decor( d.getCmd(), d.getPos() - length, d.getData() ) ); 
 		
-			decors.clear();
+		decors.clear();
 
-			decors.addAll( newDecors );
-		}
+		decors.addAll( newDecors );
 		
 					
 //		if ( decors != null)
@@ -446,9 +442,8 @@ class ParaLine {
 		
 		pl.buff.append( buff );
 		
-		if ( decors != null )
-			for ( Decor dec : decors )
-				pl.InsertDecor( dec.getCmd(), dec.getPos(), dec.getData() );
+		for ( Decor dec : decors )
+			pl.InsertDecor( dec.getCmd(), dec.getPos(), dec.getData() );
 		
 		return pl;		
 	}
@@ -463,7 +458,7 @@ class ParaLine {
 		
 		if ( pos < 0 ||
 			 pos > buff.length() ||
-			 pos >= width ) {
+			 pos > width ) {
 			log.severe( String.format( "[InsertChar] Invalid position [%d] for char inserting!", pos ) );
 			return;
 		}
@@ -473,6 +468,9 @@ class ParaLine {
 			buff.insert( pos, ch );
 			ShiftDecors( pos, 1 );
 		}
+		
+		if ( buff.length() > width )
+		  width = buff.length();
 	}
 	
 	/**
@@ -557,7 +555,7 @@ class ParaLine {
 		
 		buff.append( str );
 		
-		if ( decors != null && NewDecors != null && NewDecors.length > 0 )
+		if ( NewDecors.length > 0 )
   		decors.addAll(Arrays.stream( NewDecors )
   						    .map( d -> d.SetLine( this, d.getPos() + shift ) )
   						    .collect( Collectors.toList() )
@@ -583,10 +581,9 @@ class ParaLine {
 //		for ( Decor d : pl.decors )
 //			decors.add( new Decor( d.getCmd(), d.getPos() + shift, d.getData() ) );
 
-		if ( decors != null && pl.decors != null )
-			decors.addAll( pl.decors.stream()
-									 .map( d -> d.SetLine( this, d.getPos() + shift ) )
-									 .collect( Collectors.toList() ) );
+		decors.addAll( pl.decors.stream()
+		                        .map( d -> d.SetLine( this, d.getPos() + shift ) )
+		                        .collect( Collectors.toList() ) );
 				
 		return this;
 	}
@@ -602,9 +599,6 @@ class ParaLine {
 		
 		if ( pos > buff.length() )
 			pos = buff.length();
-		
-		if ( decors == null )
-			decors = new ArrayList<Decor>();
 		
 		decors.add( new Decor( this, dec, pos, data ) );
 		
@@ -756,7 +750,7 @@ class ParaLine {
 	
 		ParaLine pl = new ParaLine( sb.length() );
 		pl.buff.append( sb );
-		pl.decors = decors;
+		pl.decors.addAll( decors );
 		
 		return pl;
 		
@@ -793,8 +787,7 @@ class ParaLine {
 	 */
 	public void Clear() {
 		
-		if ( decors != null )
-			decors.clear();
+		decors.clear();
 		
 		buff.delete( 0, buff.length() );
 		
@@ -819,7 +812,7 @@ class ParaLine {
 		ParaLine pl = new ParaLine( 0 );
 		
 		if ( len > buff.length() )
-			return pl.AddPline( this.CutHead( buff.length() ) );
+			return pl.AddPline( this.CutHead( buff.length() ).Align( paFill, len ) );
 		
 		// look for the maximum delimiter position in the buffer
 		// limited by len
@@ -850,17 +843,17 @@ class ParaLine {
 	 * @param len    -- length of the resulted string
 	 * 
 	 */
-	private void Align( PAlign align, int len ) {
+	private ParaLine Align( PAlign align, int len ) {
 		
 		if ( align == Para.PAlign.PA_AS_IS )
-			return;
+			return this;
 		
 		// remove leading or trailing spaces for every line
 		this.Trim(ParaLine.TrimSide.TS_BOTH);
 	
 		int fillSpace = len - buff.length();
 		if ( fillSpace <= 0 )
-			return;
+			return this;
 				
 		switch ( align ) {
 		
@@ -881,7 +874,7 @@ class ParaLine {
 			
 			case PA_FILL :
 				
-				if ( fillSpace > 0 ) { 
+				if ( fillSpace > 0 && fillSpace <= 0.25*buff.length() ) { 
 				
 					List<Integer[]> words = new ArrayList<Integer[]>(); 
 					boolean firstWord = true;
@@ -926,6 +919,8 @@ class ParaLine {
 				}
 				break;
 		}
+		
+		return this;
 				
 	}
 
